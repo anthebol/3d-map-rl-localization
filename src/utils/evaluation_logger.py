@@ -1,7 +1,7 @@
 import numpy as np
 import matplotlib.pyplot as plt
 
-from evaluate import evaluate_policy
+from src.policy_evaluation import evaluate_policy
 from tensorboardX import SummaryWriter
 
 

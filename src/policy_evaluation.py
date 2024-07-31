@@ -1,24 +1,24 @@
-import numpy as np
-import warnings
 from typing import Any, Callable, Dict, List, Optional, Tuple, Union
-
+import warnings
+import numpy as np
 import gymnasium as gym
+
 from stable_baselines3.common import type_aliases
-from stable_baselines3.common.vec_env import DummyVecEnv, VecEnv, VecMonitor, is_vecenv_wrapped
 from stable_baselines3.common.monitor import Monitor
+from stable_baselines3.common.vec_env import DummyVecEnv, VecEnv, VecMonitor, is_vecenv_wrapped
 
 
 def evaluate_policy(
-        model: "type_aliases.PolicyPredictor",
-        env: Union[gym.Env, VecEnv],
-        n_eval_episodes: int = 10,
-        deterministic: bool = True,
-        render: bool = False,
-        callback: Optional[Callable[[Dict[str, Any], Dict[str, Any]], None]] = None,
-        reward_threshold: Optional[float] = None,
-        return_episode_rewards: bool = False,
-        total_timestep: int = -1,
-        warn: bool = True,
+    model: "type_aliases.PolicyPredictor",
+    env: Union[gym.Env, VecEnv],
+    n_eval_episodes: int = 10,
+    deterministic: bool = True,
+    render: bool = False,
+    callback: Optional[Callable[[Dict[str, Any], Dict[str, Any]], None]] = None,
+    reward_threshold: Optional[float] = None,
+    return_episode_rewards: bool = False,
+    total_timestep: int = -1,
+    warn: bool = True,
 ) -> Union[Tuple[float, float], Tuple[List[float], List[int]]]:
     is_monitor_wrapped = False
 
@@ -38,6 +38,8 @@ def evaluate_policy(
     n_envs = env.num_envs
     episode_rewards = []
     episode_lengths = []
+    final_distances = []
+    successes = 0
 
     episode_counts = np.zeros(n_envs, dtype="int")
     episode_count_targets = np.array([(n_eval_episodes + i) // n_envs for i in range(n_envs)], dtype="int")
@@ -47,6 +49,7 @@ def evaluate_policy(
     observations = env.reset()
     states = None
     episode_starts = np.ones((env.num_envs,), dtype=bool)
+    
     while (episode_counts < episode_count_targets).any():
         actions, states = model.predict(
             observations,
@@ -59,6 +62,7 @@ def evaluate_policy(
         current_lengths += 1
         for i in range(n_envs):
             if episode_counts[i] < episode_count_targets[i]:
+                # unpack values
                 reward = rewards[i]
                 done = dones[i]
                 info = infos[i]
@@ -69,6 +73,9 @@ def evaluate_policy(
 
                 if dones[i] or (total_timestep != -1 and current_lengths[i] >= total_timestep):
                     if is_monitor_wrapped:
+                        # Atari wrapper can send a "done" signal when
+                        # the agent loses a life, but it does not correspond
+                        # to the true end of episode
                         if "episode" in info.keys():
                             episode_rewards.append(info["episode"]["r"])
                             episode_lengths.append(info["episode"]["l"])
@@ -77,6 +84,12 @@ def evaluate_policy(
                         episode_rewards.append(current_rewards[i])
                         episode_lengths.append(current_lengths[i])
                         episode_counts[i] += 1
+                    
+                    # Add final distance and success information
+                    final_distances.append(info.get('final_distance', 0))
+                    if info.get('success', False):
+                        successes += 1
+                    
                     current_rewards[i] = 0
                     current_lengths[i] = 0
 
@@ -87,8 +100,9 @@ def evaluate_policy(
 
     mean_reward = np.mean(episode_rewards)
     std_reward = np.std(episode_rewards)
+    success_rate = successes / n_eval_episodes
+    
     if reward_threshold is not None:
         assert mean_reward > reward_threshold, f"Mean reward below threshold: {mean_reward:.2f} < {reward_threshold:.2f}"
-    if return_episode_rewards:
-        return episode_rewards, episode_lengths
-    return mean_reward, std_reward
+    
+    return episode_rewards, episode_lengths, final_distances, success_rate
