@@ -1,0 +1,9 @@
+# Ignore all logs and TensorBoard logs
+logs/
+tensorboard_logs/
+
+# Ignore all __pycache__ directories
+**/__pycache__/
+
+# Ignore specific file
+rl.db
