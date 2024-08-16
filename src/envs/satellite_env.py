@@ -1,116 +1,139 @@
-import os
-import gym
+import gymnasium as gym
+from gymnasium import spaces
 import torch
-
-from gym import spaces
+import numpy as np
 from PIL import Image
 from torchvision.transforms import Compose, Resize, CenterCrop, ToTensor
-
+import os
 
 class SatelliteEnv(gym.Env):
     def __init__(self, action_step=0.05, image_size=(224, 224), device='cpu'):
         super().__init__()
-        self.device = device
+        self.device = torch.device(device)
         self.image_size = image_size
         self.action_step = action_step
         self.episode_reward = 0.0
         self.episode_length = 0
         
-        self.action_space = spaces.Box(low=-1, high=1, shape=(2, 1))
-        self.observation_space = spaces.Dict(
-            {
-                "target_image": spaces.Box(low=0, high=255, shape=(224, 224, 3)),
-                "current_state_image": spaces.Box(low=0, high=255, shape=(224, 224, 3)),
-            }
-        )
+        # Use numpy for internal state
+        self.agent_point = np.random.rand(2)
 
-        environment_path = os.path.join('../data', 'exibition_road_1.jpg')
-        self.environment_image_pil = Image.open(environment_path).convert("RGB")
+        self.action_space = spaces.Box(low=-1, high=1, shape=(2, ), dtype=np.float32)
+        self.observation_space = spaces.Dict({
+            "target_image": spaces.Box(low=0, high=255, shape=(224, 224, 3), dtype=np.uint8),
+            "current_state_image": spaces.Box(low=0, high=255, shape=(224, 224, 3), dtype=np.uint8),
+        })
+        print(f"SatelliteEnv observation space: {self.observation_space}")
 
-        self.transform = Compose(
-            [
-                Resize(self.image_size),
-                CenterCrop(self.image_size),
-                ToTensor(),
-                lambda x: x.to(device),
-            ]
-        )
+        self.transform = Compose([
+            Resize(self.image_size),
+            CenterCrop(self.image_size),
+            ToTensor(),
+        ])
 
-        target_image_path = os.path.join('../data', 'queens_tower.jpg')
-        self.target_image_pil = Image.open(target_image_path).convert("RGB")
-        self.target_image = self.transform(self.target_image_pil).to(device)
-        
-        self.agent_point = torch.rand(2, device=device)
+        environment_path = os.path.join('data', 'exibition_road_1.jpg')
+        self.environment_image = self.load_image(environment_path)
 
-        self.time_penalty = -0.01  # small time penalty for each step
-        self.success_reward = 100  # large reward for finding the target
-        self.success_threshold = 0.90  # cosine similarity threshold for "finding" the target
+        target_image_path = os.path.join('data', 'queens_tower.jpg')
+        self.target_image = self.load_image(target_image_path)
 
-
-    def get_image(self, point):
-        offset = torch.tensor([self.environment_image_pil.width, self.environment_image_pil.height], device=self.device)
-        scaled_point = point * offset
-        scaled_point = scaled_point.to(torch.int64)
-        crop_x1 = max(0, scaled_point[0].item())
-        crop_y1 = max(0, scaled_point[1].item())
-        crop_x2 = min(self.environment_image_pil.width, crop_x1 + 224)
-        crop_y2 = min(self.environment_image_pil.height, crop_y1 + 224)
-
-        cropped_image = self.environment_image_pil.crop((crop_x1, crop_y1, crop_x2, crop_y2))
-        image = self.transform(cropped_image)
-        image_np = image.cpu().numpy()
-
-        return image_np
-
+        self.time_penalty = -0.01
+        self.success_reward = 100
+        self.success_threshold = 0.90
 
     def step(self, action):
-        action_scale = 0.01
+        # convert action to numpy and ensure it's a 1D array with 2 elements
+        action_np = np.array(action).flatten()[:2]
         
-        self.agent_point[0] += action[0] * action_scale 
-        self.agent_point[1] += action[1] * action_scale 
-
-        self.agent_point = torch.clamp(self.agent_point, 0, 0.9)
-
+        # update agent position
+        self.agent_point += action_np * self.action_step
+        self.agent_point = np.clip(self.agent_point, 0, 0.9)
+        
         current_state_image = self.get_image(self.agent_point)
-        current_state_image_flat = torch.tensor(current_state_image, dtype=torch.float32).flatten().to(self.device)
-        target_image_flat = self.target_image.flatten()
-
-        assert current_state_image_flat.shape == target_image_flat.shape, f"Shape mismatch: {current_state_image_flat.shape} vs {target_image_flat.shape}"
-
-        cosine_similarity = torch.nn.functional.cosine_similarity(target_image_flat, current_state_image_flat, dim=0).item()
-
-        reward = self.time_penalty
-
-        done = cosine_similarity > self.success_threshold
-        if done:
+        
+        cosine_similarity = self.calculate_similarity(current_state_image)
+        
+        # exponential reward scale
+        base = 10  # tweak this to control the steepness of the curve
+        similarity_reward = (base ** (cosine_similarity - 0.8)) - 1
+        
+        reward = self.time_penalty + similarity_reward
+        
+        terminated = cosine_similarity > self.success_threshold
+        truncated = False
+        
+        if terminated:
             reward += self.success_reward
-        else:
-            reward += cosine_similarity 
-
+        
+        print(f"Step: Action: {action}, Reward: {reward:.4f}, Similarity: {cosine_similarity:.4f}, Terminated: {terminated}")
+        
+        # Prepare info dictionary
         info = {
             'cosine_similarity': cosine_similarity,
-            'success': done,
+            'success': terminated,
+            'agent_coordinates': self.agent_point.copy(),  # Use .copy() to avoid potential reference issues
         }
-
-        if done:
-            info['agent_coordinates'] = self.agent_point.cpu().numpy()
-            print("Episode terminated!")
-
-        obs = {
-            "target_image": self.target_image.cpu().numpy().transpose(1, 2, 0),
-            "current_state_image": current_state_image.transpose(1, 2, 0),
-        }
-
-        return obs, reward, done, info
-
-
-    def reset(self):
-        self.agent_point = torch.rand(2).to(self.device) * 0.9 
-        self.target_image = self.transform(self.target_image_pil).to(self.device)
+        
+        if terminated:
+            print(f"Episode terminated! Final similarity: {cosine_similarity:.4f}")
         
         obs = {
-            "target_image": self.target_image.cpu().numpy().transpose(1, 2, 0),
-            "current_state_image": self.get_image(self.agent_point).transpose(1, 2, 0),
+            "target_image": self.target_image.cpu().numpy().transpose(1, 2, 0).astype(np.uint8),
+            "current_state_image": current_state_image.cpu().numpy().transpose(1, 2, 0).astype(np.uint8),
+        }
+        
+        return obs, reward, terminated, truncated, info
+    
+    def reset(self, seed=None, options=None):
+        super().reset(seed=seed)
+        self.agent_point = np.random.rand(2) * 0.9
+        
+        obs = {
+            "target_image": self.target_image.cpu().numpy().transpose(1, 2, 0).astype(np.uint8),
+            "current_state_image": self.get_image(self.agent_point).cpu().numpy().transpose(1, 2, 0).astype(np.uint8),
         }
 
-        return obs
+
+        print(f"Observation shape in SatelliteEnv reset: {obs['current_state_image'].shape}")
+        print(f"Reset: Initial agent position: {self.agent_point}")
+
+        return obs, {}
+
+    def render(self):
+        pass
+
+    def close(self):
+        pass
+
+    def calculate_similarity(self, current_image):
+        current_image_flat = current_image.flatten()
+        target_image_flat = self.target_image.flatten()
+        return torch.nn.functional.cosine_similarity(current_image_flat, target_image_flat, dim=0).item()
+
+    def load_image(self, path):
+        with Image.open(path).convert("RGB") as img:
+            return self.transform(img).to(self.device)
+        
+    def get_image(self, point):
+        point_tensor = torch.tensor(point, device=self.device)
+        offset = torch.tensor([self.environment_image.shape[2], self.environment_image.shape[1]], device=self.device)
+        scaled_point = point_tensor * offset
+        scaled_point = scaled_point.to(torch.int64)
+        
+        crop_x1 = max(0, scaled_point[0].item())
+        crop_y1 = max(0, scaled_point[1].item())
+        crop_x2 = min(self.environment_image.shape[2], crop_x1 + self.image_size[0])
+        crop_y2 = min(self.environment_image.shape[1], crop_y1 + self.image_size[1])
+
+        cropped_image = self.environment_image[:, crop_y1:crop_y2, crop_x1:crop_x2]
+        
+        # Ensure the cropped image is the correct size
+        if cropped_image.shape[1:] != self.image_size:
+            cropped_image = torch.nn.functional.interpolate(
+                cropped_image.unsqueeze(0), 
+                size=self.image_size, 
+                mode='bilinear', 
+                align_corners=False
+            ).squeeze(0)
+
+        return cropped_image
