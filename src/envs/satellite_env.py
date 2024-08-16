@@ -18,6 +18,7 @@ class SatelliteEnv(gym.Env):
         # Use numpy for internal state
         self.agent_point = np.random.rand(2)
 
+        # Use Gymnasium spaces (which use numpy) for action and observation spaces
         self.action_space = spaces.Box(low=-1, high=1, shape=(2, ), dtype=np.float32)
         self.observation_space = spaces.Dict({
             "target_image": spaces.Box(low=0, high=255, shape=(224, 224, 3), dtype=np.uint8),
@@ -42,21 +43,24 @@ class SatelliteEnv(gym.Env):
         self.success_threshold = 0.90
 
     def step(self, action):
-        # convert action to numpy and ensure it's a 1D array with 2 elements
+        # Convert action to numpy and ensure it's a 1D array with 2 elements
         action_np = np.array(action).flatten()[:2]
         
-        # update agent position
+        # Update agent position
         self.agent_point += action_np * self.action_step
         self.agent_point = np.clip(self.agent_point, 0, 0.9)
         
+        # Get new state image
         current_state_image = self.get_image(self.agent_point)
         
+        # Calculate similarity
         cosine_similarity = self.calculate_similarity(current_state_image)
         
-        # exponential reward scale
-        base = 10  # tweak this to control the steepness of the curve
+        # Exponential reward scale
+        base = 10  # Adjust this to control the steepness of the curve
         similarity_reward = (base ** (cosine_similarity - 0.8)) - 1
         
+        # Calculate reward
         reward = self.time_penalty + similarity_reward
         
         terminated = cosine_similarity > self.success_threshold

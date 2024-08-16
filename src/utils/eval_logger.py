@@ -4,6 +4,7 @@ from stable_baselines3.common.evaluation import evaluate_policy
 import matplotlib.pyplot as plt
 import os
 
+
 class CustomEvalCallback:
     def __init__(self):
         self.final_distances = []
@@ -13,6 +14,7 @@ class CustomEvalCallback:
             info = locals_['infos'][0]
             if 'final_distance' in info:
                 self.final_distances.append(info['final_distance'])
+
 
 def log_evaluation(model, env, log_dir, plots_dir, results_path, run_number, n_eval_episodes=10):
     eval_writer = SummaryWriter(log_dir=log_dir)
@@ -30,7 +32,6 @@ def log_evaluation(model, env, log_dir, plots_dir, results_path, run_number, n_e
     mean_final_distance = np.mean(callback.final_distances) if callback.final_distances else None
     success_rate = sum(r > 0 for r in episode_rewards) / len(episode_rewards)  # Assuming success is when reward > 0
 
-    # Log to file
     with open(results_path, 'w') as f:
         f.write(f"Mean Reward: {mean_reward:.2f} +/- {std_reward:.2f}\n")
         f.write(f"Mean Episode Length: {mean_length:.2f}\n")
@@ -38,24 +39,22 @@ def log_evaluation(model, env, log_dir, plots_dir, results_path, run_number, n_e
             f.write(f"Mean Final Distance to Target: {mean_final_distance:.2f}\n")
         f.write(f"Success Rate: {success_rate:.2%}\n")
 
-    # Log to console
     print(f"Mean Reward: {mean_reward:.2f} +/- {std_reward:.2f}")
     print(f"Mean Episode Length: {mean_length:.2f}")
     if mean_final_distance is not None:
         print(f"Mean Final Distance to Target: {mean_final_distance:.2f}")
     print(f"Success Rate: {success_rate:.2%}")
 
-    # Log to TensorBoard
     eval_writer.add_scalar('Eval/Mean_Reward', mean_reward)
     eval_writer.add_scalar('Eval/Mean_Episode_Length', mean_length)
     if mean_final_distance is not None:
         eval_writer.add_scalar('Eval/Mean_Final_Distance', mean_final_distance)
     eval_writer.add_scalar('Eval/Success_Rate', success_rate)
 
-    # Create plots
     plot_evaluation_results(episode_rewards, episode_lengths, callback.final_distances, plots_dir, run_number)
 
     eval_writer.close()
+
 
 def plot_evaluation_results(rewards, lengths, distances, plots_dir, run_number):
     fig, (ax1, ax2, ax3) = plt.subplots(3, 1, figsize=(10, 15))

@@ -1,20 +1,17 @@
 import gym
 import torch
 import torch.nn as nn
-import torchvision.models as models
-
-from stable_baselines3.common.policies import  ActorCriticPolicy
+from torchvision.models import mobilenet_v2, MobileNet_V2_Weights
 from stable_baselines3.common.torch_layers import BaseFeaturesExtractor
-
+from stable_baselines3.common.policies import ActorCriticPolicy
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
 
 class MapRLNetwork(BaseFeaturesExtractor):
     def __init__(self, observation_space: gym.spaces.Space, features_dim: int = 64):
         super(MapRLNetwork, self).__init__(observation_space, features_dim)
         
-        self.mobilenet = models.mobilenet_v2(pretrained=True)
+        self.mobilenet = mobilenet_v2(weights=MobileNet_V2_Weights.DEFAULT)
         self.mobilenet.classifier = nn.Identity()
         self.mobilenet = self.mobilenet.to(device)
         
@@ -25,13 +22,13 @@ class MapRLNetwork(BaseFeaturesExtractor):
         )
         
     def forward(self, obs):
-        target_image = obs["target_image"].permute(0, 3, 1, 2).float()
-        current_state_image = obs["current_state_image"].permute(0, 3, 1, 2).float()
+        # Assume input is already in [batch_size, channels, height, width] format
+        target_image = obs["target_image"].float()
+        current_state_image = obs["current_state_image"].float()
         
         self.mobilenet.eval()
         
         target_features = self.mobilenet(target_image)
-
         current_state_features = self.mobilenet(current_state_image)
         
         target_features = torch.flatten(target_features, start_dim=1)
@@ -42,7 +39,6 @@ class MapRLNetwork(BaseFeaturesExtractor):
         )
 
         return self.network(features)
-    
 
 class MapRLPolicy(ActorCriticPolicy):
     def __init__(self, *args, **kwargs):
