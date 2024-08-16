@@ -5,7 +5,7 @@ import numpy as np
 
 from envs.satellite_env import SatelliteEnv
 from envs.map_rl_network import MapRLPolicy
-from evaluate import evaluate_policy
+from stable_baselines3.common.evaluation import evaluate_policy
 
 
 def objective(trial):
