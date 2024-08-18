@@ -8,6 +8,10 @@ from envs.satellite_env import SatelliteEnv
 from envs.map_rl_network import MapRLPolicy
 from stable_baselines3.common.evaluation import evaluate_policy
 from tensorboardX import SummaryWriter
+import numpy as np
+from datetime import datetime
+import logging 
+
 
 TENSORBOARD_LOG_DIR = "./tensorboard_logs/"
 CHECKPOINT_DIR = "./checkpoints/"
@@ -26,73 +30,106 @@ def linear_schedule(initial_value: float) -> Callable[[float], float]:
 
 
 def create_ppo_model(env: SatelliteEnv, trial: optuna.Trial) -> PPO:
-    """Create a PPO model with hyperparameters suggested by Optuna."""
     return PPO(
         MapRLPolicy,
         env,
         verbose=1,
         device="cuda" if torch.cuda.is_available() else "cpu",
         tensorboard_log=TENSORBOARD_LOG_DIR,
-        learning_rate=trial.suggest_float("learning_rate", 1e-4, 1e-2),
-        gamma=trial.suggest_float("gamma", 0.9, 0.999),
-        gae_lambda=trial.suggest_float("gae_lambda", 0.8, 1.),
-        clip_range=trial.suggest_float("clip_range", 0.1, 0.5),
-        ent_coef=trial.suggest_float("ent_coef", 0., 0.5),
-        vf_coef=trial.suggest_float("vf_coef", 0.3, 0.8),
-        max_grad_norm=trial.suggest_float("max_grad_norm", 0.3, 0.8),
-        batch_size=16,
-        n_steps=100,
-        stats_window_size=1,
-        n_epochs=1,
+        learning_rate=trial.suggest_loguniform("learning_rate", 1e-5, 5e-3),
+        gamma=trial.suggest_float("gamma", 0.9, 0.9999),
+        gae_lambda=trial.suggest_float("gae_lambda", 0.8, 1.0),
+        clip_range=trial.suggest_float("clip_range", 0.1, 0.3),
+        ent_coef=trial.suggest_loguniform("ent_coef", 1e-8, 0.1),
+        vf_coef=trial.suggest_float("vf_coef", 0.5, 1.0),
+        max_grad_norm=trial.suggest_float("max_grad_norm", 0.3, 1.0),
+        batch_size=trial.suggest_categorical("batch_size", [32, 64, 128, 256]),
+        n_steps=trial.suggest_categorical("n_steps", [1024, 2048, 4096]),
+        n_epochs=trial.suggest_int("n_epochs", 3, 10),
     )
 
 
-def objective(trial: optuna.Trial) -> float:
-    """Objective function for Optuna optimization."""
+def objective(trial):
     env = SatelliteEnv()
-    model = create_ppo_model(env, trial)
-    
-    model.learn(total_timesteps=100)
-    
-    mean_reward, std_reward = evaluate_policy(model, env, n_eval_episodes=10, deterministic=True)
+    model = PPO(
+        MapRLPolicy,
+        env,
+        verbose=1,
+        device="cuda",
+        tensorboard_log="./tensorboard_logs/",
+        learning_rate=trial.suggest_float("learning_rate", 1e-5, 1e-3, log=True),
+        gamma=trial.suggest_float("gamma", 0.9, 0.999),
+        gae_lambda=trial.suggest_float("gae_lambda", 0.9, 0.999),
+        clip_range=trial.suggest_float("clip_range", 0.1, 0.3),
+        ent_coef=trial.suggest_float("ent_coef", 1e-5, 0.1, log=True),
+        vf_coef=trial.suggest_float("vf_coef", 0.5, 0.9),
+        max_grad_norm=trial.suggest_float("max_grad_norm", 0.3, 0.5),
+        batch_size=32,
+        n_steps=128,
+        n_epochs=trial.suggest_int("n_epochs", 3, 10),
+    )
 
-    return mean_reward
+    callback = LoggerRewardCallback()
+
+    try:
+        model.learn(total_timesteps=1000, callback=callback)
+        print("Training completed. Starting evaluation...")
+        
+        # Evaluate for a single episode
+        eval_env = SatelliteEnv()  # Create a separate environment for evaluation
+        mean_reward, _ = evaluate_policy(model, eval_env, n_eval_episodes=1)
+        
+        print(f"Evaluation episode finished. Mean reward: {mean_reward:.2f}")
+        
+        return mean_reward
+    except Exception as e:
+        print(f"Training or evaluation failed with error: {e}")
+        return float('-inf')
 
 
 class LoggerRewardCallback(BaseCallback):
-    def __init__(self, logger, writer: SummaryWriter, save_freq: int = 1000):
-        super(LoggerRewardCallback, self).__init__()
-        self.logger = logger
-        self.writer = writer
-        self.save_freq = save_freq
-        self.episode_count = 0
+    def __init__(self, verbose=0):
+        super(LoggerRewardCallback, self).__init__(verbose)
         self.episode_reward = 0
+        self.episode_count = 0
+
+    def _init_callback(self) -> None:
+        # Initialize the variables when the training starts
+        self.episode_reward = 0
+        self.episode_count = 0
 
     def _on_step(self) -> bool:
-        self.episode_reward += self.locals["rewards"][0]
-        if self.n_calls % self.save_freq == 0:
-            path = os.path.join(CHECKPOINT_DIR, f"ppo_satellite_step_{self.n_calls}.zip")
-            self.model.save(path)
-            self.logger.info(f"Model checkpoint saved to {path}")
+        # Get the reward and cosine similarity for the current step
+        reward = self.locals["rewards"][0]
+        info = self.locals["infos"][0]  # Get the info dictionary
+        cosine_similarity = info.get("cosine_similarity", None)
+
+        self.episode_reward += reward
+
+        # Log the current reward and cosine similarity
+        current_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S,%f')[:-3]
+        self.logger.record("reward", reward)
+        self.logger.record("cosine_similarity", cosine_similarity)
+        print(f"{current_time} - INFO - Step reward: {reward:.8f}, Cosine similarity: {cosine_similarity:.8f}")
+
+        # Check if the episode has ended
+        if self.locals["dones"][0]:
+            self.logger.record("episode_reward", self.episode_reward)
+            print(f"{current_time} - INFO - Episode {self.episode_count} finished. Total reward: {self.episode_reward:.8f}")
+            
+            self.episode_count += 1
+            self.episode_reward = 0
+
         return True
 
     def _on_rollout_end(self) -> None:
-        self.logger.info(f"Episode reward: {self.episode_reward}")
-        self.writer.add_scalar('Training/Episode_Reward', self.episode_reward, self.episode_count)
-        self.episode_count += 1
-        self.episode_reward = 0
-
-    def _on_training_end(self) -> None:
-        self.writer.close()
-        self.model.save(FINAL_MODEL_PATH)
-        self.logger.info(f"Final model saved to {FINAL_MODEL_PATH}")
+        self.logger.dump(step=self.num_timesteps)
 
 
-def train_model(model: PPO, env: SatelliteEnv, logger, total_timesteps: int = 20000) -> PPO:
+def train_model(model: PPO, env: SatelliteEnv, total_timesteps: int = 1000000) -> PPO:
     """Train the model and log results."""
     os.makedirs(CHECKPOINT_DIR, exist_ok=True)
-    writer = SummaryWriter(log_dir=TENSORBOARD_LOG_DIR)
-    callback = LoggerRewardCallback(logger, writer)
+    callback = LoggerRewardCallback()
     
     model.learn(total_timesteps=total_timesteps, callback=callback)
     
@@ -117,7 +154,7 @@ def main():
     final_model = train_model(best_model, env, logger)
 
     # Final evaluation
-    mean_reward, std_reward = evaluate_policy(final_model, env, n_eval_episodes=10, deterministic=True)
+    mean_reward, std_reward = evaluate_policy(final_model, env, n_eval_episodes=1, deterministic=True)
     logger.info(f"Final model performance: {mean_reward:.2f} +/- {std_reward:.2f}")
 
 if __name__ == "__main__":

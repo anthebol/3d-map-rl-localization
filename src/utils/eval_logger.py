@@ -16,7 +16,7 @@ class CustomEvalCallback:
                 self.final_distances.append(info['final_distance'])
 
 
-def log_evaluation(model, env, log_dir, plots_dir, results_path, run_number, n_eval_episodes=10):
+def log_evaluation(model, env, log_dir, plots_dir, results_path, run_number, n_eval_episodes=1):
     eval_writer = SummaryWriter(log_dir=log_dir)
 
     print("Starting evaluation...")

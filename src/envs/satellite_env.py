@@ -32,10 +32,10 @@ class SatelliteEnv(gym.Env):
             ToTensor(),
         ])
 
-        environment_path = os.path.join('data', 'exibition_road_1.jpg')
+        environment_path = os.path.join('../data', 'exibition_road_1.jpg')
         self.environment_image = self.load_image(environment_path)
 
-        target_image_path = os.path.join('data', 'queens_tower.jpg')
+        target_image_path = os.path.join('../data', 'queens_tower.jpg')
         self.target_image = self.load_image(target_image_path)
 
         self.time_penalty = -0.01
@@ -55,21 +55,16 @@ class SatelliteEnv(gym.Env):
         
         # Calculate similarity
         cosine_similarity = self.calculate_similarity(current_state_image)
-        
-        # Exponential reward scale
-        base = 10  # Adjust this to control the steepness of the curve
-        similarity_reward = (base ** (cosine_similarity - 0.8)) - 1
-        
+
         # Calculate reward
-        reward = self.time_penalty + similarity_reward
-        
+        reward = cosine_similarity
         terminated = cosine_similarity > self.success_threshold
         truncated = False
-        
+
         if terminated:
             reward += self.success_reward
         
-        print(f"Step: Action: {action}, Reward: {reward:.4f}, Similarity: {cosine_similarity:.4f}, Terminated: {terminated}")
+        # print(f"Step: Action: {action}, Reward: {reward:.4f}, Similarity: {cosine_similarity:.4f}, Terminated: {terminated}")
         
         # Prepare info dictionary
         info = {

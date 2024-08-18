@@ -66,7 +66,7 @@ if __name__ == "__main__":
     # Optuna study
     sampler = SimulatedAnnealingSampler()
     study = optuna.create_study(storage="sqlite:///rl.db", direction="maximize", sampler=sampler)
-    study.optimize(objective, n_trials=2)
+    study.optimize(objective, n_trials=1)
 
     print(f"Best trial: {study.best_trial.params}")
     print(f"Best reward: {study.best_trial.value}")
@@ -94,16 +94,9 @@ if __name__ == "__main__":
 
     env = SatelliteEnv()
 
-    logger_reward_callback = LoggerRewardCallback(
-        logger, 
-        writer, 
-        save_path=run_dirs["model_save_path"],
-        checkpoints_dir=run_dirs["checkpoints_dir"],
-        save_freq=10000
-    )
     model.learn(
-        total_timesteps=200*100, 
-        callback=logger_reward_callback, 
+        total_timesteps=1000, 
+        callback=LoggerRewardCallback(), 
         tb_log_name=f"PPO_{run_dirs['run_number']}"
     )
 
@@ -118,8 +111,8 @@ if __name__ == "__main__":
         plots_dir=run_dirs["eval_plots_dir"],
         results_path=run_dirs["eval_results_path"],
         run_number=run_dirs["run_number"], 
-        n_eval_episodes=50, 
-        total_timestep=1000
+        n_eval_episodes=5,  # Reduced from 50 to 5 for quicker evaluation
+        total_timestep=100  # Reduced from 1000 to 100 for quicker evaluation
     )
 
     writer.close()
