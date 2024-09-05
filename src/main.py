@@ -9,6 +9,9 @@ from envs.satellite_env import SatelliteEnv
 from stable_baselines3 import PPO
 from envs.map_rl_network import MapRLPolicy
 import torch
+from stable_baselines3.common.monitor import Monitor
+from stable_baselines3.common.evaluation import evaluate_policy
+import gymnasium as gym
 
 def get_next_run_number(base_dir):
     os.makedirs(base_dir, exist_ok=True)
@@ -71,8 +74,11 @@ if __name__ == "__main__":
     print(f"Best trial: {study.best_trial.params}")
     print(f"Best reward: {study.best_trial.value}")
 
-    # create model with best parameters
+    # Create and wrap the environment with Monitor
     env = SatelliteEnv()
+    env = gym.wrappers.TimeLimit(env, max_episode_steps=1000)  # Add this line
+    env = Monitor(env)
+
     model = PPO(
         MapRLPolicy,
         env,
@@ -92,27 +98,20 @@ if __name__ == "__main__":
         n_epochs=1,
     )
 
-    env = SatelliteEnv()
+    # Re-wrap the environment with Monitor for evaluation if necessary
+    # eval_env = Monitor(SatelliteEnv())
 
-    model.learn(
-        total_timesteps=1000, 
-        callback=LoggerRewardCallback(), 
-        tb_log_name=f"PPO_{run_dirs['run_number']}"
-    )
+    model.learn(total_timesteps=1000)
 
-    # save final model
-    model.save(run_dirs["model_save_path"])
-    print(f"Final model saved to {run_dirs['model_save_path']}")
+    eval_env = SatelliteEnv()
+    eval_env = gym.wrappers.TimeLimit(eval_env, max_episode_steps=1000)  # Gymnasium's TimeLimit
+    eval_env = Monitor(eval_env)
+    
+    mean_reward, std_reward = evaluate_policy(model, eval_env, n_eval_episodes=1)
+    print(f"Evaluation complete. Mean reward: {mean_reward}, Std reward: {std_reward}")
+    # # Save final model
+    # model.save(run_dirs["model_save_path"])
+    # print(f"Final model saved to {run_dirs['model_save_path']}")
 
-    log_evaluation(
-        model, 
-        env, 
-        log_dir=run_dirs["eval_dir"],
-        plots_dir=run_dirs["eval_plots_dir"],
-        results_path=run_dirs["eval_results_path"],
-        run_number=run_dirs["run_number"], 
-        n_eval_episodes=5,  # Reduced from 50 to 5 for quicker evaluation
-        total_timestep=100  # Reduced from 1000 to 100 for quicker evaluation
-    )
 
     writer.close()

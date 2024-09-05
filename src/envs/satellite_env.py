@@ -14,6 +14,7 @@ class SatelliteEnv(gym.Env):
         self.action_step = action_step
         self.episode_reward = 0.0
         self.episode_length = 0
+        self.max_episode_length = 1000
         
         # Use numpy for internal state
         self.agent_point = np.random.rand(2)
@@ -43,6 +44,8 @@ class SatelliteEnv(gym.Env):
         self.success_threshold = 0.90
 
     def step(self, action):
+        self.episode_length += 1
+        
         # Convert action to numpy and ensure it's a 1D array with 2 elements
         action_np = np.array(action).flatten()[:2]
         
@@ -59,22 +62,22 @@ class SatelliteEnv(gym.Env):
         # Calculate reward
         reward = cosine_similarity
         terminated = cosine_similarity > self.success_threshold
-        truncated = False
+        truncated = self.episode_length >= self.max_episode_length
 
         if terminated:
             reward += self.success_reward
-        
-        # print(f"Step: Action: {action}, Reward: {reward:.4f}, Similarity: {cosine_similarity:.4f}, Terminated: {terminated}")
         
         # Prepare info dictionary
         info = {
             'cosine_similarity': cosine_similarity,
             'success': terminated,
-            'agent_coordinates': self.agent_point.copy(),  # Use .copy() to avoid potential reference issues
+            'agent_coordinates': self.agent_point.copy(),
+            'episode_length': self.episode_length
         }
         
-        if terminated:
-            print(f"Episode terminated! Final similarity: {cosine_similarity:.4f}")
+        if terminated or truncated:
+            print(f"Episode ended! Reason: {'Success' if terminated else 'Max steps reached'}")
+            print(f"Final similarity: {cosine_similarity:.4f}, Steps taken: {self.episode_length}")
         
         obs = {
             "target_image": self.target_image.cpu().numpy().transpose(1, 2, 0).astype(np.uint8),
@@ -118,11 +121,15 @@ class SatelliteEnv(gym.Env):
         offset = torch.tensor([self.environment_image.shape[2], self.environment_image.shape[1]], device=self.device)
         scaled_point = point_tensor * offset
         scaled_point = scaled_point.to(torch.int64)
-        
+
         crop_x1 = max(0, scaled_point[0].item())
         crop_y1 = max(0, scaled_point[1].item())
         crop_x2 = min(self.environment_image.shape[2], crop_x1 + self.image_size[0])
         crop_y2 = min(self.environment_image.shape[1], crop_y1 + self.image_size[1])
+
+        # Ensure the cropped area is valid and non-empty
+        if crop_x2 <= crop_x1 or crop_y2 <= crop_y1:
+            raise ValueError(f"Invalid crop area: ({crop_x1}, {crop_y1}) to ({crop_x2}, {crop_y2})")
 
         cropped_image = self.environment_image[:, crop_y1:crop_y2, crop_x1:crop_x2]
         

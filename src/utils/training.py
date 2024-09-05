@@ -11,7 +11,8 @@ from tensorboardX import SummaryWriter
 import numpy as np
 from datetime import datetime
 import logging 
-
+from stable_baselines3.common.monitor import Monitor
+import gymnasium as gym
 
 TENSORBOARD_LOG_DIR = "./tensorboard_logs/"
 CHECKPOINT_DIR = "./checkpoints/"
@@ -51,11 +52,14 @@ def create_ppo_model(env: SatelliteEnv, trial: optuna.Trial) -> PPO:
 
 def objective(trial):
     env = SatelliteEnv()
+    env = gym.wrappers.TimeLimit(env, max_episode_steps=1000)
+    env = Monitor(env)
+    
     model = PPO(
         MapRLPolicy,
         env,
         verbose=1,
-        device="cuda",
+        device="cuda" if torch.cuda.is_available() else "cpu",
         tensorboard_log="./tensorboard_logs/",
         learning_rate=trial.suggest_float("learning_rate", 1e-5, 1e-3, log=True),
         gamma=trial.suggest_float("gamma", 0.9, 0.999),
@@ -69,22 +73,48 @@ def objective(trial):
         n_epochs=trial.suggest_int("n_epochs", 3, 10),
     )
 
-    callback = LoggerRewardCallback()
+    model.learn(total_timesteps=1000, callback=LoggerRewardCallback())
 
-    try:
-        model.learn(total_timesteps=1000, callback=callback)
-        print("Training completed. Starting evaluation...")
+    print("Training completed. Starting evaluation...")
+    
+    # Create a separate environment for evaluation
+    eval_env = SatelliteEnv()
+    eval_env = gym.wrappers.TimeLimit(eval_env, max_episode_steps=1000)
+    eval_env = Monitor(eval_env)
+
+    mean_reward, std_reward = evaluate_policy(model, eval_env, n_eval_episodes=1)
+    print(f"Evaluation completed: Mean reward: {mean_reward}, Std: {std_reward}")
+
+    return mean_reward
+
+    # return mean_reward, mean_std
+        # num_episodes = 5
+        # episode_rewards = []
+        # for episode in range(num_episodes):
+        #     print(f"Episode {episode + 1}/{num_episodes}")
+        #     obs = eval_env.reset()
+        #     done = False
+        #     episode_reward = 0
+        #     step = 0
+        #     while not done:
+        #         action, _ = model.predict(obs, deterministic=True)
+        #         obs, reward, done, info = eval_env.step(action)
+        #         episode_reward += reward
+        #         step += 1
+        #         if step % 10 == 0:
+        #             print(f"  Step {step}, Current reward: {episode_reward:.2f}")
+            
+        #     episode_rewards.append(episode_reward)
+        #     print(f"Episode {episode + 1} finished. Total reward: {episode_reward:.2f}")
         
-        # Evaluate for a single episode
-        eval_env = SatelliteEnv()  # Create a separate environment for evaluation
-        mean_reward, _ = evaluate_policy(model, eval_env, n_eval_episodes=1)
-        
-        print(f"Evaluation episode finished. Mean reward: {mean_reward:.2f}")
-        
-        return mean_reward
-    except Exception as e:
-        print(f"Training or evaluation failed with error: {e}")
-        return float('-inf')
+        # mean_reward = np.mean(episode_rewards)
+        # std_reward = np.std(episode_rewards)
+        # print(f"Evaluation complete. Mean reward: {mean_reward:.2f} +/- {std_reward:.2f}")
+        # return mean_reward, std_reward
+    
+    # except Exception as e:
+    #     print(f"Training or evaluation failed with error: {e}")
+    #     return float('-inf')
 
 
 class LoggerRewardCallback(BaseCallback):
@@ -110,7 +140,9 @@ class LoggerRewardCallback(BaseCallback):
         current_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S,%f')[:-3]
         self.logger.record("reward", reward)
         self.logger.record("cosine_similarity", cosine_similarity)
-        print(f"{current_time} - INFO - Step reward: {reward:.8f}, Cosine similarity: {cosine_similarity:.8f}")
+        print(
+            f"{current_time} - INFO - Step reward: {reward:.8f}, Cosine similarity: {cosine_similarity:.8f}, Cumalative reward: {self.episode_reward:.8f}"
+            )
 
         # Check if the episode has ended
         if self.locals["dones"][0]:
@@ -137,7 +169,6 @@ def train_model(model: PPO, env: SatelliteEnv, total_timesteps: int = 1000000) -
 
 
 def main():
-    import logging
     logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
     logger = logging.getLogger(__name__)
 
