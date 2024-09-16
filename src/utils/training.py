@@ -1,18 +1,18 @@
+import logging
 import os
+from datetime import datetime
+from typing import Callable
+
+import gymnasium as gym
 import optuna
 import torch
-from typing import Callable
 from stable_baselines3 import PPO
 from stable_baselines3.common.callbacks import BaseCallback
-from envs.satellite_env import SatelliteEnv
-from envs.map_rl_network import MapRLPolicy
 from stable_baselines3.common.evaluation import evaluate_policy
-from tensorboardX import SummaryWriter
-import numpy as np
-from datetime import datetime
-import logging 
 from stable_baselines3.common.monitor import Monitor
-import gymnasium as gym
+
+from envs.map_rl_network import MapRLPolicy
+from envs.satellite_env import SatelliteEnv
 
 TENSORBOARD_LOG_DIR = "./tensorboard_logs/"
 CHECKPOINT_DIR = "./checkpoints/"
@@ -25,8 +25,10 @@ def linear_schedule(initial_value: float) -> Callable[[float], float]:
     :param initial_value: Initial learning rate
     :return: A function that computes the learning rate given the remaining progress
     """
+
     def func(progress_remaining: float) -> float:
         return progress_remaining * initial_value
+
     return func
 
 
@@ -54,7 +56,7 @@ def objective(trial):
     env = SatelliteEnv()
     env = gym.wrappers.TimeLimit(env, max_episode_steps=1000)
     env = Monitor(env)
-    
+
     model = PPO(
         MapRLPolicy,
         env,
@@ -76,7 +78,7 @@ def objective(trial):
     model.learn(total_timesteps=1000, callback=LoggerRewardCallback())
 
     print("Training completed. Starting evaluation...")
-    
+
     # Create a separate environment for evaluation
     eval_env = SatelliteEnv()
     eval_env = gym.wrappers.TimeLimit(eval_env, max_episode_steps=1000)
@@ -86,35 +88,6 @@ def objective(trial):
     print(f"Evaluation completed: Mean reward: {mean_reward}, Std: {std_reward}")
 
     return mean_reward
-
-    # return mean_reward, mean_std
-        # num_episodes = 5
-        # episode_rewards = []
-        # for episode in range(num_episodes):
-        #     print(f"Episode {episode + 1}/{num_episodes}")
-        #     obs = eval_env.reset()
-        #     done = False
-        #     episode_reward = 0
-        #     step = 0
-        #     while not done:
-        #         action, _ = model.predict(obs, deterministic=True)
-        #         obs, reward, done, info = eval_env.step(action)
-        #         episode_reward += reward
-        #         step += 1
-        #         if step % 10 == 0:
-        #             print(f"  Step {step}, Current reward: {episode_reward:.2f}")
-            
-        #     episode_rewards.append(episode_reward)
-        #     print(f"Episode {episode + 1} finished. Total reward: {episode_reward:.2f}")
-        
-        # mean_reward = np.mean(episode_rewards)
-        # std_reward = np.std(episode_rewards)
-        # print(f"Evaluation complete. Mean reward: {mean_reward:.2f} +/- {std_reward:.2f}")
-        # return mean_reward, std_reward
-    
-    # except Exception as e:
-    #     print(f"Training or evaluation failed with error: {e}")
-    #     return float('-inf')
 
 
 class LoggerRewardCallback(BaseCallback):
@@ -137,18 +110,20 @@ class LoggerRewardCallback(BaseCallback):
         self.episode_reward += reward
 
         # Log the current reward and cosine similarity
-        current_time = datetime.now().strftime('%Y-%m-%d %H:%M:%S,%f')[:-3]
+        current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S,%f")[:-3]
         self.logger.record("reward", reward)
         self.logger.record("cosine_similarity", cosine_similarity)
         print(
             f"{current_time} - INFO - Step reward: {reward:.8f}, Cosine similarity: {cosine_similarity:.8f}, Cumalative reward: {self.episode_reward:.8f}"
-            )
+        )
 
         # Check if the episode has ended
         if self.locals["dones"][0]:
             self.logger.record("episode_reward", self.episode_reward)
-            print(f"{current_time} - INFO - Episode {self.episode_count} finished. Total reward: {self.episode_reward:.8f}")
-            
+            print(
+                f"{current_time} - INFO - Episode {self.episode_count} finished. Total reward: {self.episode_reward:.8f}"
+            )
+
             self.episode_count += 1
             self.episode_reward = 0
 
@@ -162,14 +137,16 @@ def train_model(model: PPO, env: SatelliteEnv, total_timesteps: int = 1000000) -
     """Train the model and log results."""
     os.makedirs(CHECKPOINT_DIR, exist_ok=True)
     callback = LoggerRewardCallback()
-    
+
     model.learn(total_timesteps=total_timesteps, callback=callback)
-    
+
     return model
 
 
 def main():
-    logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
+    logging.basicConfig(
+        level=logging.INFO, format="%(asctime)s - %(levelname)s - %(message)s"
+    )
     logger = logging.getLogger(__name__)
 
     # Optuna study
@@ -185,8 +162,11 @@ def main():
     final_model = train_model(best_model, env, logger)
 
     # Final evaluation
-    mean_reward, std_reward = evaluate_policy(final_model, env, n_eval_episodes=1, deterministic=True)
+    mean_reward, std_reward = evaluate_policy(
+        final_model, env, n_eval_episodes=1, deterministic=True
+    )
     logger.info(f"Final model performance: {mean_reward:.2f} +/- {std_reward:.2f}")
+
 
 if __name__ == "__main__":
     main()
