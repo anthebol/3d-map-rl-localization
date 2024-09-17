@@ -13,6 +13,7 @@ from stable_baselines3.common.monitor import Monitor
 
 from envs.map_rl_network import MapRLPolicy
 from envs.satellite_env import SatelliteEnv
+from utils.eval_callback import PeriodicEvalCallback
 
 TENSORBOARD_LOG_DIR = "./tensorboard_logs/"
 CHECKPOINT_DIR = "./checkpoints/"
@@ -75,7 +76,10 @@ def objective(trial):
         n_epochs=trial.suggest_int("n_epochs", 3, 10),
     )
 
-    model.learn(total_timesteps=1000, callback=LoggerRewardCallback())
+    logger_callback = LoggerRewardCallback()
+    eval_callback = PeriodicEvalCallback(env, eval_freq=10000, n_eval_episodes=5)
+
+    model.learn(total_timesteps=100000, callback=[logger_callback, eval_callback])
 
     print("Training completed. Starting evaluation...")
 
@@ -133,12 +137,13 @@ class LoggerRewardCallback(BaseCallback):
         self.logger.dump(step=self.num_timesteps)
 
 
-def train_model(model: PPO, env: SatelliteEnv, total_timesteps: int = 1000000) -> PPO:
+def train_model(model: PPO, env: SatelliteEnv, total_timesteps) -> PPO:
     """Train the model and log results."""
     os.makedirs(CHECKPOINT_DIR, exist_ok=True)
-    callback = LoggerRewardCallback()
+    logger_callback = LoggerRewardCallback()
+    eval_callback = PeriodicEvalCallback(env, eval_freq=10000, n_eval_episodes=5)
 
-    model.learn(total_timesteps=total_timesteps, callback=callback)
+    model.learn(total_timesteps=100000, callback=[logger_callback, eval_callback])
 
     return model
 
@@ -163,7 +168,10 @@ def main():
 
     # Final evaluation
     mean_reward, std_reward = evaluate_policy(
-        final_model, env, n_eval_episodes=1, deterministic=True
+        final_model,
+        env,
+        n_eval_episodes=1,
+        deterministic=True,
     )
     logger.info(f"Final model performance: {mean_reward:.2f} +/- {std_reward:.2f}")
 

@@ -12,7 +12,8 @@ from tensorboardX import SummaryWriter
 from envs.map_rl_network import MapRLPolicy
 from envs.satellite_env import SatelliteEnv
 from samplers import SimulatedAnnealingSampler
-from utils.training import objective
+from utils.eval_callback import PeriodicEvalCallback
+from utils.training import LoggerRewardCallback, objective
 
 
 def get_next_run_number(base_dir):
@@ -92,8 +93,12 @@ if __name__ == "__main__":
 
     # create and wrap the environment with Monitor
     env = SatelliteEnv()
-    env = gym.wrappers.TimeLimit(env, max_episode_steps=1000)  # Add this line
+    env = gym.wrappers.TimeLimit(env, max_episode_steps=1000)
     env = Monitor(env)
+
+    eval_env = SatelliteEnv()
+    eval_env = gym.wrappers.TimeLimit(eval_env, max_episode_steps=1000)
+    eval_env = Monitor(eval_env)
 
     model = PPO(
         MapRLPolicy,
@@ -108,24 +113,25 @@ if __name__ == "__main__":
         ent_coef=study.best_trial.params["ent_coef"],
         vf_coef=study.best_trial.params["vf_coef"],
         max_grad_norm=study.best_trial.params["max_grad_norm"],
-        batch_size=16,
+        batch_size=64,
         n_steps=100,
         stats_window_size=1,
-        n_epochs=1,
+        n_epochs=4,
     )
 
-    model.learn(total_timesteps=1000)
+    logger_callback = LoggerRewardCallback()
+    eval_callback = PeriodicEvalCallback(
+        eval_env, eval_freq=10000, n_eval_episodes=5, tensorboard_log=writer
+    )
 
-    eval_env = SatelliteEnv()
-    eval_env = gym.wrappers.TimeLimit(
-        eval_env, max_episode_steps=1000
-    )  # Gymnasium's timeLimit
-    eval_env = Monitor(eval_env)
+    model.learn(total_timesteps=100000, callback=[logger_callback, eval_callback])
 
-    mean_reward, std_reward = evaluate_policy(model, eval_env, n_eval_episodes=1)
-    print(f"Evaluation complete. Mean reward: {mean_reward}, Std reward: {std_reward}")
-    # # Save final model
-    # model.save(run_dirs["model_save_path"])
-    # print(f"Final model saved to {run_dirs['model_save_path']}")
+    # Final evaluation
+    mean_reward, std_reward = evaluate_policy(model, eval_env, n_eval_episodes=10)
+    print(f"Final evaluation - Mean reward: {mean_reward}, Std reward: {std_reward}")
+
+    # Save final model
+    model.save(run_dirs["model_save_path"])
+    print(f"Final model saved to {run_dirs['model_save_path']}")
 
     writer.close()
