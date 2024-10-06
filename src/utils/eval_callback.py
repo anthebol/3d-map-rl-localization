@@ -4,7 +4,11 @@ from stable_baselines3.common.evaluation import evaluate_policy
 
 class PeriodicEvalCallback(BaseCallback):
     def __init__(
-        self, eval_env, eval_freq=10000, n_eval_episodes=5, tensorboard_log=None
+        self,
+        eval_env,
+        eval_freq,
+        n_eval_episodes,
+        tensorboard_log=None,
     ):
         super().__init__()
         self.eval_env = eval_env

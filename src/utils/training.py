@@ -1,7 +1,6 @@
 import logging
 import os
 from datetime import datetime
-from typing import Callable
 
 import gymnasium as gym
 import optuna
@@ -10,86 +9,90 @@ from stable_baselines3 import PPO
 from stable_baselines3.common.callbacks import BaseCallback
 from stable_baselines3.common.evaluation import evaluate_policy
 from stable_baselines3.common.monitor import Monitor
+from stable_baselines3.common.utils import get_linear_fn
 
 from envs.map_rl_network import MapRLPolicy
 from envs.satellite_env import SatelliteEnv
 from utils.eval_callback import PeriodicEvalCallback
+from utils.load_data import load_image, load_target_images
+from utils.test_callback import TestCallback
 
 TENSORBOARD_LOG_DIR = "./tensorboard_logs/"
 CHECKPOINT_DIR = "./checkpoints/"
 FINAL_MODEL_PATH = "./final_model.zip"
 
-
-def linear_schedule(initial_value: float) -> Callable[[float], float]:
-    """
-    Linear learning rate schedule.
-    :param initial_value: Initial learning rate
-    :return: A function that computes the learning rate given the remaining progress
-    """
-
-    def func(progress_remaining: float) -> float:
-        return progress_remaining * initial_value
-
-    return func
+env_image_path = os.path.join("data", "env", "env_image_exibition_road.jpg")
+env_image = load_image(env_image_path)
+train_eval_targets = load_target_images(os.path.join("data", "train_eval"))
+test_targets = load_target_images(os.path.join("data", "test"))
+single_target = {"high_performing_image": train_eval_targets["target_003_statue"]}
 
 
 def create_ppo_model(env: SatelliteEnv, trial: optuna.Trial) -> PPO:
+    initial_learning_rate = trial.suggest_loguniform("learning_rate", 1e-5, 1e-3)
+    end_learning_rate = initial_learning_rate / 10
+
+    lr_schedule = get_linear_fn(initial_learning_rate, end_learning_rate, 1.0)
+
     return PPO(
         MapRLPolicy,
         env,
         verbose=1,
         device="cuda" if torch.cuda.is_available() else "cpu",
         tensorboard_log=TENSORBOARD_LOG_DIR,
-        learning_rate=trial.suggest_loguniform("learning_rate", 1e-5, 5e-3),
+        learning_rate=lr_schedule,
         gamma=trial.suggest_float("gamma", 0.9, 0.9999),
-        gae_lambda=trial.suggest_float("gae_lambda", 0.8, 1.0),
+        gae_lambda=trial.suggest_float("gae_lambda", 0.9, 0.999),
         clip_range=trial.suggest_float("clip_range", 0.1, 0.3),
-        ent_coef=trial.suggest_loguniform("ent_coef", 1e-8, 0.1),
-        vf_coef=trial.suggest_float("vf_coef", 0.5, 1.0),
+        ent_coef=trial.suggest_loguniform("ent_coef", 1e-8, 0.01),
+        vf_coef=trial.suggest_float("vf_coef", 0.5, 0.9),
         max_grad_norm=trial.suggest_float("max_grad_norm", 0.3, 1.0),
-        batch_size=trial.suggest_categorical("batch_size", [32, 64, 128, 256]),
-        n_steps=trial.suggest_categorical("n_steps", [1024, 2048, 4096]),
-        n_epochs=trial.suggest_int("n_epochs", 3, 10),
+        batch_size=trial.suggest_categorical("batch_size", [32, 64, 128]),
+        n_steps=trial.suggest_categorical("n_steps", [512, 1024, 2048]),
+        n_epochs=trial.suggest_int("n_epochs", 5, 15),
     )
 
 
 def objective(trial):
-    env = SatelliteEnv()
-    env = gym.wrappers.TimeLimit(env, max_episode_steps=1000)
+    env = SatelliteEnv(env_image=env_image, target_images=single_target)
+    env = gym.wrappers.TimeLimit(env, max_episode_steps=2500)
     env = Monitor(env)
 
-    model = PPO(
-        MapRLPolicy,
-        env,
-        verbose=1,
-        device="cuda" if torch.cuda.is_available() else "cpu",
-        tensorboard_log="./tensorboard_logs/",
-        learning_rate=trial.suggest_float("learning_rate", 1e-5, 1e-3, log=True),
-        gamma=trial.suggest_float("gamma", 0.9, 0.999),
-        gae_lambda=trial.suggest_float("gae_lambda", 0.9, 0.999),
-        clip_range=trial.suggest_float("clip_range", 0.1, 0.3),
-        ent_coef=trial.suggest_float("ent_coef", 1e-5, 0.1, log=True),
-        vf_coef=trial.suggest_float("vf_coef", 0.5, 0.9),
-        max_grad_norm=trial.suggest_float("max_grad_norm", 0.3, 0.5),
-        batch_size=32,
-        n_steps=128,
-        n_epochs=trial.suggest_int("n_epochs", 3, 10),
-    )
-
-    logger_callback = LoggerRewardCallback()
-    eval_callback = PeriodicEvalCallback(env, eval_freq=10000, n_eval_episodes=5)
-
-    model.learn(total_timesteps=100000, callback=[logger_callback, eval_callback])
-
-    print("Training completed. Starting evaluation...")
-
-    # Create a separate environment for evaluation
-    eval_env = SatelliteEnv()
-    eval_env = gym.wrappers.TimeLimit(eval_env, max_episode_steps=1000)
+    eval_env = SatelliteEnv(env_image=env_image, target_images=single_target)
+    eval_env = gym.wrappers.TimeLimit(eval_env, max_episode_steps=2500)
     eval_env = Monitor(eval_env)
 
-    mean_reward, std_reward = evaluate_policy(model, eval_env, n_eval_episodes=1)
-    print(f"Evaluation completed: Mean reward: {mean_reward}, Std: {std_reward}")
+    test_env = SatelliteEnv(env_image=env_image, target_images=single_target)
+    test_env = gym.wrappers.TimeLimit(test_env, max_episode_steps=2500)
+    test_env = Monitor(test_env)
+
+    model = create_ppo_model(env, trial)
+
+    logger_callback = LoggerRewardCallback()
+    eval_callback = PeriodicEvalCallback(
+        eval_env,
+        eval_freq=10000,
+        n_eval_episodes=25,
+    )
+    test_callback = TestCallback(
+        test_env,
+        test_freq=25000,
+        n_test_episodes=14,
+    )
+
+    model.learn(
+        total_timesteps=50000,
+        callback=[logger_callback, eval_callback, test_callback],
+    )
+
+    print("Training completed. Starting final evaluation...")
+
+    mean_reward, std_reward = evaluate_policy(
+        model,
+        eval_env,
+        n_eval_episodes=20,
+    )
+    print(f"Final evaluation completed: Mean reward: {mean_reward}, Std: {std_reward}")
 
     return mean_reward
 
@@ -101,33 +104,35 @@ class LoggerRewardCallback(BaseCallback):
         self.episode_count = 0
 
     def _init_callback(self) -> None:
-        # Initialize the variables when the training starts
         self.episode_reward = 0
         self.episode_count = 0
 
     def _on_step(self) -> bool:
-        # Get the reward and cosine similarity for the current step
         reward = self.locals["rewards"][0]
-        info = self.locals["infos"][0]  # Get the info dictionary
+        info = self.locals["infos"][0]
         cosine_similarity = info.get("cosine_similarity", None)
+        current_target = info.get("current_target", None)
 
         self.episode_reward += reward
 
-        # Log the current reward and cosine similarity
         current_time = datetime.now().strftime("%Y-%m-%d %H:%M:%S,%f")[:-3]
         self.logger.record("reward", reward)
         self.logger.record("cosine_similarity", cosine_similarity)
+        self.logger.record("current_target", current_target)
+
         print(
-            f"{current_time} - INFO - Step reward: {reward:.8f}, Cosine similarity: {cosine_similarity:.8f}, Cumalative reward: {self.episode_reward:.8f}"
+            f"{current_time} - INFO - Step reward: {reward:.8f}, "
+            f"Cosine similarity: {cosine_similarity:.8f}, "
+            f"Cumulative reward: {self.episode_reward:.8f}, "
+            f"Current target: {current_target}"
         )
 
-        # Check if the episode has ended
         if self.locals["dones"][0]:
             self.logger.record("episode_reward", self.episode_reward)
             print(
-                f"{current_time} - INFO - Episode {self.episode_count} finished. Total reward: {self.episode_reward:.8f}"
+                f"{current_time} - INFO - Episode {self.episode_count} finished. "
+                f"Total reward: {self.episode_reward:.8f}"
             )
-
             self.episode_count += 1
             self.episode_reward = 0
 
@@ -137,13 +142,30 @@ class LoggerRewardCallback(BaseCallback):
         self.logger.dump(step=self.num_timesteps)
 
 
-def train_model(model: PPO, env: SatelliteEnv, total_timesteps) -> PPO:
-    """Train the model and log results."""
+def train_model(
+    model: PPO,
+    env: SatelliteEnv,
+    eval_env: SatelliteEnv,
+    test_env: SatelliteEnv,
+    total_timesteps: int,
+) -> PPO:
     os.makedirs(CHECKPOINT_DIR, exist_ok=True)
     logger_callback = LoggerRewardCallback()
-    eval_callback = PeriodicEvalCallback(env, eval_freq=10000, n_eval_episodes=5)
+    eval_callback = PeriodicEvalCallback(
+        eval_env,
+        eval_freq=50000,
+        n_eval_episodes=len(train_eval_targets),
+    )
+    test_callback = TestCallback(
+        test_env,
+        test_freq=50000,
+        n_test_episodes=len(test_targets),
+    )
 
-    model.learn(total_timesteps=100000, callback=[logger_callback, eval_callback])
+    model.learn(
+        total_timesteps=total_timesteps,
+        callback=[logger_callback, eval_callback, test_callback],
+    )
 
     return model
 
@@ -154,26 +176,56 @@ def main():
     )
     logger = logging.getLogger(__name__)
 
-    # Optuna study
     study = optuna.create_study(direction="maximize")
-    study.optimize(objective, n_trials=10)
+    study.optimize(objective, n_trials=5)
 
     logger.info(f"Best trial: {study.best_trial.params}")
     logger.info(f"Best reward: {study.best_trial.value}")
 
-    # Train the best model
-    env = SatelliteEnv()
-    best_model = create_ppo_model(env, study.best_trial)
-    final_model = train_model(best_model, env, logger)
+    env = SatelliteEnv(env_image=env_image, target_images=train_eval_targets)
+    env = gym.wrappers.TimeLimit(env, max_episode_steps=1500)
+    env = Monitor(env)
 
-    # Final evaluation
+    eval_env = SatelliteEnv(env_image=env_image, target_images=train_eval_targets)
+    eval_env = gym.wrappers.TimeLimit(eval_env, max_episode_steps=1500)
+    eval_env = Monitor(eval_env)
+
+    test_env = SatelliteEnv(env_image=env_image, target_images=test_targets)
+    test_env = gym.wrappers.TimeLimit(test_env, max_episode_steps=1500)
+    test_env = Monitor(test_env)
+
+    best_model = create_ppo_model(env, study.best_trial)
+    final_model = train_model(
+        best_model,
+        env,
+        eval_env,
+        test_env,
+        total_timesteps=200000,
+    )
+
+    final_model.save(FINAL_MODEL_PATH)
+    logger.info(f"Final model saved to {FINAL_MODEL_PATH}")
+
     mean_reward, std_reward = evaluate_policy(
         final_model,
-        env,
-        n_eval_episodes=1,
+        eval_env,
+        n_eval_episodes=len(train_eval_targets),
         deterministic=True,
     )
-    logger.info(f"Final model performance: {mean_reward:.2f} +/- {std_reward:.2f}")
+    logger.info(
+        f"Final model performance on train/eval set: {mean_reward:.2f} +/- {std_reward:.2f}"
+    )
+
+    loaded_model = PPO.load(FINAL_MODEL_PATH)
+    mean_reward, std_reward = evaluate_policy(
+        loaded_model,
+        test_env,
+        n_eval_episodes=len(test_targets),
+        deterministic=True,
+    )
+    logger.info(
+        f"Final model performance on test set: {mean_reward:.2f} +/- {std_reward:.2f}"
+    )
 
 
 if __name__ == "__main__":

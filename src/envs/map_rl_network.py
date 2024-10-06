@@ -9,13 +9,14 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 class MapRLNetwork(BaseFeaturesExtractor):
-    def __init__(self, observation_space: gym.spaces.Space, features_dim: int = 64):
+    def __init__(self, observation_space: gym.spaces.Space, features_dim: int = 1280):
         super(MapRLNetwork, self).__init__(observation_space, features_dim)
 
         self.mobilenet = mobilenet_v2(weights=MobileNet_V2_Weights.DEFAULT)
         self.mobilenet.classifier = nn.Identity()
         self.mobilenet = self.mobilenet.to(device)
 
+        # Update the input size of the first linear layer
         self.network = nn.Sequential(
             nn.Linear(features_dim * 2, 128),
             nn.ReLU(),
