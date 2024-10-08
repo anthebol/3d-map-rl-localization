@@ -29,7 +29,7 @@ Authored By: Anthony Bolton
 - **reset()**: randomizes agent position, selects new target
 - **get_image(coordinate)**: extracts current view of agent, image at same scale as target image is cropped based on the agent's current position as the center from environment image, ensuring consistency in navigation size
 - **Agent Movement**: new position calculated as (x + ax * action_step, y + ay * action_step), clipped to environment bounds
-- Episode Termination: success (similarity > threshold) or max steps reached (default 1000)
+- **Episode Termination**: success (similarity > threshold) or max steps reached (default 1000)
 
 ### NN Architecture (`MapRLNetwork`)
 - Feature extractor inheriting from `BaseFeaturesExtractor`
@@ -94,6 +94,15 @@ Authored By: Anthony Bolton
 
 Directory: `data/train_eval/target_003_statue.jpg`
 
+- Rollout Length(n_steps): 1,024
+- Optuna Trials: 2
+- Optuna Timesteps per Trial: 50,000
+
+
+- Average Cosine Similarity: 0.9036
+- Highest Cosine Similarity: 0.9154
+- Highest Episode(2000 steps) Reward: 3738.2632
+- Highest Step Reward: 2.4582
 
 ### Training
 ![Alt text](results/train1_100000steps/diagrams/baseline_cos_sim_and_reward.svg)

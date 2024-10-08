@@ -1,17 +1,18 @@
 numpy==1.24.3
 pandas==2.0.2
 matplotlib==3.7.1
+Pillow==9.5.0
+scipy==1.10.1  
+tqdm==4.65.0 
 
+# ML frameworks
 torch==2.0.1
 torchvision==0.15.2
 
+# RL
 gymnasium==0.28.1
 stable-baselines3==2.0.0
 
+# Optimisation and logging
 optuna==3.1.1
-tensorboardX==2.6
-
-Pillow==9.5.0
-
-scipy==1.10.1  
-tqdm==4.65.0   
+tensorboardX==2.6  
