@@ -94,27 +94,78 @@ Authored By: Anthony Bolton
 
 directory: `data/train_eval/target_003_statue.jpg`
 
-#### Configuration
+<div style="display: flex; justify-content: space-between;">
 
-| Parameter                    | Value        |
-|-------------------------------|--------------|
-| Rollout Length (n_steps)       | 1,024        |
-| Optuna Trials                  | 2            |
-| Optuna Timesteps per Trial     | 50,000       |
-| Training Timesteps             | 100,000      |
-| Eval Frequency                 | 10,000       |
-| Eval Episode                   | 10           |
-| Test Frequency                 | 50,000       |
-| Test Episode                   | 25           |
+  <div style="width: 45%;">
+    <h4>Configuration</h4>
+    <table>
+      <tr>
+        <th>Parameter</th>
+        <th>Value</th>
+      </tr>
+      <tr>
+        <td>Rollout Length (n_steps)</td>
+        <td>1,024</td>
+      </tr>
+      <tr>
+        <td>Optuna Trials</td>
+        <td>2</td>
+      </tr>
+      <tr>
+        <td>Optuna Timesteps per Trial</td>
+        <td>50,000</td>
+      </tr>
+      <tr>
+        <td>Training Timesteps</td>
+        <td>100,000</td>
+      </tr>
+      <tr>
+        <td>Eval Frequency</td>
+        <td>10,000</td>
+      </tr>
+      <tr>
+        <td>Eval Episode</td>
+        <td>10</td>
+      </tr>
+      <tr>
+        <td>Test Frequency</td>
+        <td>50,000</td>
+      </tr>
+      <tr>
+        <td>Test Episode</td>
+        <td>25</td>
+      </tr>
+    </table>
+  </div>
 
-#### Results
+  <div style="width: 45%;">
+    <h4>Results</h4>
+    <table>
+      <tr>
+        <th>Metric</th>
+        <th>Value</th>
+      </tr>
+      <tr>
+        <td>Average Cosine Similarity</td>
+        <td>0.9036</td>
+      </tr>
+      <tr>
+        <td>Highest Cosine Similarity</td>
+        <td>0.9154</td>
+      </tr>
+      <tr>
+        <td>Highest Episode (2,500 steps) Reward</td>
+        <td>3,738.2632</td>
+      </tr>
+      <tr>
+        <td>Highest Step Reward</td>
+        <td>2.4582</td>
+      </tr>
+    </table>
+  </div>
 
-| Metric                          | Value         |
-|----------------------------------|---------------|
-| Average Cosine Similarity        | 0.9036        |
-| Highest Cosine Similarity        | 0.9154        |
-| Highest Episode (2,500 steps) Reward | 3,738.2632  |
-| Highest Step Reward              | 2.4582        |
+</div>
+
 
 
 **Model performance on train/eval set**: 2787.31 +/- 6.30 \
@@ -136,27 +187,78 @@ directory: `data/train_eval/target_003_statue.jpg`
 
 ## Experiment 1: Train and Evaluate on 27 Images, Test on 7 Images
 
-#### Configuration
+<div style="display: flex; justify-content: space-between;">
 
-| Parameter                    | Value        |
-|-------------------------------|--------------|
-| Rollout Length (n_steps)       | 4,096        |
-| Optuna Trials                  | 5            |
-| Optuna Timesteps per Trial     | 50,000       |
-| Training Timesteps             | 500,000      |
-| Eval Frequency                 | 50,000       |
-| Eval Episode                   | 25           |
-| Test Frequency                 | 100,000       |
-| Test Episode                   | 14           |
+  <div style="width: 45%;">
+    <h4>Configuration</h4>
+    <table>
+      <tr>
+        <th>Parameter</th>
+        <th>Value</th>
+      </tr>
+      <tr>
+        <td>Rollout Length (n_steps)</td>
+        <td>4,096</td>
+      </tr>
+      <tr>
+        <td>Optuna Trials</td>
+        <td>5</td>
+      </tr>
+      <tr>
+        <td>Optuna Timesteps per Trial</td>
+        <td>50,000</td>
+      </tr>
+      <tr>
+        <td>Training Timesteps</td>
+        <td>500,000</td>
+      </tr>
+      <tr>
+        <td>Eval Frequency</td>
+        <td>50,000</td>
+      </tr>
+      <tr>
+        <td>Eval Episode</td>
+        <td>25</td>
+      </tr>
+      <tr>
+        <td>Test Frequency</td>
+        <td>100,000</td>
+      </tr>
+      <tr>
+        <td>Test Episode</td>
+        <td>14</td>
+      </tr>
+    </table>
+  </div>
 
-#### Results
+  <div style="width: 45%;">
+    <h4>Results</h4>
+    <table>
+      <tr>
+        <th>Metric</th>
+        <th>Value</th>
+      </tr>
+      <tr>
+        <td>Average Cosine Similarity</td>
+        <td>0.8510</td>
+      </tr>
+      <tr>
+        <td>Highest Cosine Similarity</td>
+        <td>0.8904</td>
+      </tr>
+      <tr>
+        <td>Highest Episode (1,500 steps) Reward</td>
+        <td>1,765.7706</td>
+      </tr>
+      <tr>
+        <td>Highest Step Reward</td>
+        <td>0.8897</td>
+      </tr>
+    </table>
+  </div>
 
-| Metric                          | Value         |
-|----------------------------------|---------------|
-| Average Cosine Similarity        | 0.8510        |
-| Highest Cosine Similarity        | 0.8904        |
-| Highest Episode (1,500 steps) Reward | 1,765.7706  |
-| Highest Step Reward              | 0.8897        |
+</div>
+
 ### Training
 
 ![Alt text](results/train24_500000steps_test7/experiment_1_cos_sim_and_reward.svg)
