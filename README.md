@@ -81,28 +81,46 @@ Authored By: Anthony Bolton
 
 
 
-## Results
+## Experiments and Results
 ### Environment Image
 ![Alt text](data/env/env_image_exibition_road.jpg
 )
-## Experiment 0: Best Baseline Run on 1 Image
-### Target Image
+### Experiment 0: Best Baseline Run on 1 Image
+#### Target Image
 
 <div align="center">
   <img src="data/train_eval/target_003_statue.jpg" alt="Alt text" width="200"/>
 </div>
 
-Directory: `data/train_eval/target_003_statue.jpg`
+directory: `data/train_eval/target_003_statue.jpg`
 
-- Rollout Length(n_steps): 1,024
-- Optuna Trials: 2
-- Optuna Timesteps per Trial: 50,000
+#### Configuration
+
+| Parameter                    | Value        |
+|-------------------------------|--------------|
+| Rollout Length (n_steps)       | 1,024        |
+| Optuna Trials                  | 2            |
+| Optuna Timesteps per Trial     | 50,000       |
+| Training Timesteps             | 100,000      |
+| Eval Frequency                 | 10,000       |
+| Eval Episode                   | 10           |
+| Test Frequency                 | 50,000       |
+| Test Episode                   | 25           |
+
+#### Results
+
+| Metric                          | Value         |
+|----------------------------------|---------------|
+| Average Cosine Similarity        | 0.9036        |
+| Highest Cosine Similarity        | 0.9154        |
+| Highest Episode (2,500 steps) Reward | 3,738.2632  |
+| Highest Step Reward              | 2.4582        |
 
 
-- Average Cosine Similarity: 0.9036
-- Highest Cosine Similarity: 0.9154
-- Highest Episode(2000 steps) Reward: 3738.2632
-- Highest Step Reward: 2.4582
+**Model performance on train/eval set**: 2787.31 +/- 6.30 \
+
+**Model performance on test set**: 2512.61 +/- 1067.12 \
+1/7 images navigated with 0.9128 final cosine similarity: `test_target_006_victoria_albert_museum_rooftop`
 
 ### Training
 ![Alt text](results/train1_100000steps/diagrams/baseline_cos_sim_and_reward.svg)
@@ -118,5 +136,37 @@ Directory: `data/train_eval/target_003_statue.jpg`
 
 ## Experiment 1: Train and Evaluate on 27 Images, Test on 7 Images
 
+#### Configuration
+
+| Parameter                    | Value        |
+|-------------------------------|--------------|
+| Rollout Length (n_steps)       | 4,096        |
+| Optuna Trials                  | 5            |
+| Optuna Timesteps per Trial     | 50,000       |
+| Training Timesteps             | 500,000      |
+| Eval Frequency                 | 50,000       |
+| Eval Episode                   | 25           |
+| Test Frequency                 | 100,000       |
+| Test Episode                   | 14           |
+
+#### Results
+
+| Metric                          | Value         |
+|----------------------------------|---------------|
+| Average Cosine Similarity        | 0.8510        |
+| Highest Cosine Similarity        | 0.8904        |
+| Highest Episode (1,500 steps) Reward | 1,765.7706  |
+| Highest Step Reward              | 0.8897        |
+### Training
+
+![Alt text](results/train24_500000steps_test7/experiment_1_cos_sim_and_reward.svg)
+
+### [PPO Parameters]((https://stable-baselines3.readthedocs.io/en/master/modules/ppo.html#parameters)) From SB3 During Training
+
+![Alt text](results/train24_500000steps_test7/experiment_1_PPO.png)
+
+### Evaluation
+
+![Alt text](results/train24_500000steps_test7/experiment_1_eval.png)
 
 
