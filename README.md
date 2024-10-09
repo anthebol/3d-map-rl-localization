@@ -31,7 +31,7 @@ Authored By: Anthony Bolton
 - **Agent Movement**: new position calculated as (x + ax * action_step, y + ay * action_step), clipped to environment bounds
 - **Episode Termination**: success (similarity > threshold) or max steps reached (default 1000)
 
-### NN Architecture (`MapRLNetwork`)
+### NN Architecture (`SatelliteFeatureExtractor`)
 - Feature extractor inheriting from `BaseFeaturesExtractor`
 - **Core**: [MobileNetV2](https://arxiv.org/abs/1801.04381) (pretrained on ImageNet, classifier removed)
     - Processes target and current state images independently
@@ -45,8 +45,8 @@ Authored By: Anthony Bolton
 -> Final output: 64-dimensional feature vector
 ```
 
-### Policy(`MapRLPolicy`)
-- Custom `ActorCriticPolicy` using MapRLNetwork as feature extractor
+### Policy(`SatelliteRLPolicy`)
+- Custom `ActorCriticPolicy` using SatelliteFeatureExtractor as feature extractor
 - **Actor (Policy) Network**:
     - Maps 64-dimensional state features to action probabilities
     - Output: Mean and standard deviation for Gaussian action distribution
@@ -65,7 +65,7 @@ Authored By: Anthony Bolton
     - `model.learn()` called with specified total timesteps
     - Callbacks:
         - `LoggerRewardCallback`: Detailed logging of rewards and episode info
-        - `PeriodicEvalCallback`: Evaluation on validation set every 10,000 steps
+        - `EvalCallback`: Evaluation on validation set every 10,000 steps
         - `TestCallback`: Testing on separate test set every 50,000 steps
 5. PPO implementation with adaptive learning rate (`get_linear_fn`)
 6. Final Evaluation:
