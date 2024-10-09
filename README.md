@@ -6,7 +6,7 @@ This repository presents the research conducted as part of the Undergraduate Res
 
 #### *Project Title: '3D Map-based Deep Reinforcement Learning Localization'*
 
-Supervised by: [Dr. Aaron (Yiren) Zhao](https://profiles.imperial.ac.uk/a.zhao) and Dr. [Ilia Shumailov](https://scholar.google.co.uk/citations?user=e-YbZyEAAAAJ&hl=en)\
+Supervised by: [Dr. Aaron (Yiren) Zhao](https://profiles.imperial.ac.uk/a.zhao) and [Dr. Ilia Shumailov](https://scholar.google.co.uk/citations?user=e-YbZyEAAAAJ&hl=en)\
 Authored By: Anthony Bolton
 
 
@@ -17,7 +17,7 @@ Authored By: Anthony Bolton
 
 ## Model Architecture Summary
 ### Envvironment (`SatelliteEnv`)
-- Custom Gymnasium (previously OpenAI Gym) environment simulating navigation in large 3D satellite ariel images
+- Custom [Gymnasium](https://gymnasium.farama.org/index.html) (previously OpenAI Gym) environment simulating navigation in large 3D satellite ariel images
 - **State Space**: dictionary with two 224x224x3 RGB images (target and current view)
 - **Action Space**: continuous 2D movement, Box(2) with range [-1, 1], scaled by action_step (default 0.05)
 - **Reward Function**: 
@@ -27,7 +27,7 @@ Authored By: Anthony Bolton
     - *Time Penalty*: -0.01 per step for efficiency
 - **step(action)**: updates position, extracts new view, calculates reward
 - **reset()**: randomizes agent position, selects new target
-- **get_image(coordinate)**: extracts current view of agent, image at same scale as target image is cropped based on the agent's current position as the center from environment image, ensuring consistency in navigation size
+- **get_current_image(coordinate)**: extracts current view of agent, image at same scale as target image is cropped based on the agent's current position as the center from environment image, ensuring consistency in navigation size
 - **Agent Movement**: new position calculated as (x + ax * action_step, y + ay * action_step), clipped to environment bounds
 - **Episode Termination**: success (similarity > threshold) or max steps reached (default 1000)
 
@@ -72,25 +72,21 @@ Authored By: Anthony Bolton
     - Performed on train/eval set and test set with number of episodes
 
 
-
-
-
-
-
-
-
-
-
 ## Experiments and Results
 #### Environment Image: `data/env/south_kensington.jpg`
 ![Alt text](data/env/south_kensington.jpg
 )
-### Experiment 0: Best baseline run on navigating 1 image
-#### Target Image: `data/train_eval/target_003_statue.jpg`
+### Experiment 0: Best performing baseline model trained on 1 image
+This experiment serves as a baseline for our satellite image localization task, focusing on training and evaluating the agent's performance on a single, high-performing target image. `target_003_statue` is selected as the singular training target because it demonstrated the best performance among all available images in the dataset.
 
+To further explore the agent's capabilities, the experiment scaled up the training size and removed optimization caps. Specifically, episodes were designed not to terminate - to observe how high the reward could go under extended training conditions on one image.
+
+#### Train and Evaluate(1 Image): `data/train_eval/target_003_statue.jpg`
 <div align="center">
   <img src="data/train_eval/target_003_statue.jpg" alt="Alt text" width="200"/>
 </div>
+
+#### Test(7 Images): `data/test`
 
 
 <div style="display: flex; justify-content: space-between;">
@@ -167,10 +163,10 @@ Authored By: Anthony Bolton
 
 
 
-**Model performance on train/eval set**: 2787.31 +/- 6.30 \
+**Model performance on train/eval set**: 2787.31 +/- 6.30
 
-**Model performance on test set**: 2512.61 +/- 1067.12 \
-- 1/7 images navigated with 0.9128 final cosine similarity: `test_target_006_victoria_albert_museum_rooftop`
+**Model performance on test set**: 2512.61 +/- 1067.12 
+- 1/7 images navigated: `test_target_006_victoria_albert_museum_rooftop`, final sim: 0.9128
 
 ### Training
 ![Alt text](results/train1_100000steps/diagrams/baseline_cos_sim_and_reward.svg)
@@ -184,7 +180,12 @@ Authored By: Anthony Bolton
 ![Alt text](results/train1_100000steps/diagrams/baseline_eval.png)
 
 
-## Experiment 1: Train and Evaluate on 27 Images, Test on 7 Images
+## Experiment 1: Full pipeline(train, eval, test) trained on multiple images
+This experiment trained the agent on 25 images and tested it on 7 unseen images. The training process involved exposing the agent to different target images across episodes. At the start of each episode, the environment reset with a randomly selected target image from the training set and a new starting coordinate for the agent. The agent learned to navigate and locate targets across this set of images, developing a generalized policy for the localization task. The experiences and learning from all 25 images were aggregated into the agent's overall policy throughout the training process. 
+
+This approach aimed to create an agent capable of handling diverse target scenarios and generalizing to new, unseen targets. The performance was then evaluated on the set of 7 test images to assess the agent's ability to apply its learned policy to novel situations.
+#### Train and Evaluate(25 Images): `data/train_eval`
+#### Test(7 Images): `data/test`
 
 <div style="display: flex; justify-content: space-between;">
 
@@ -257,13 +258,14 @@ Authored By: Anthony Bolton
   </div>
 
 </div>
-*Model performance on train/eval set*: 1573.11 +/- 431.30
+Model performance on train/eval set: 1573.11 +/- 431.30
+
 - 2/25 targets navigated: 
     - `target_003_statue`, final sim: 0.9026, steps taken: 8
     - `target_009_imperial_main_entrance`, final sim: 0.9013, steps taken: 413
 
-*Model performance on test set*: 1373.41 +/- 665.07
-- 1/7 targets navigated: 
+Model performance on test set: 1373.41 +/- 665.07
+- 1/7 targets navigated: `test_target_006_victoria_albert_museum_rooftop`, final sim: 0.9034, steps taken: 1
 
 (note that this experiment was designed to terminate the current episode if reward exceeds the successthreshold 0.90)
 
@@ -271,14 +273,15 @@ Authored By: Anthony Bolton
 ### Training
 
 <div style="text-align:center">
-    <img src="results/train24_500000steps_test7/experiment_1_cos_sim_and_reward.svg" alt="Cosine Similarity and Reward Graph" width="70%">
+    <img src="results/train24_500000steps_test7/diagrams/experiment_1_cos_sim_and_reward.svg" alt="Cosine Similarity and Reward Graph" width="70%">
 </div>
+
 ### [PPO Parameters]((https://stable-baselines3.readthedocs.io/en/master/modules/ppo.html#parameters)) From SB3 During Training
 
-![Alt text](results/train24_500000steps_test7/experiment_1_PPO.png)
+![Alt text](results/train24_500000steps_test7/diagrams/experiment_1_PPO.png)
 
 ### Evaluation
 
-![Alt text](results/train24_500000steps_test7/experiment_1_eval.png)
+![Alt text](results/train24_500000steps_test7/diagrams/experiment_1_eval.png)
 
 

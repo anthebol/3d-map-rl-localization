@@ -19,9 +19,29 @@ from src.optimization.optuna_sampler import SimulatedAnnealingSampler
 from src.utils.image_loader import env_image, single_target, test_targets
 from src.utils.logging_setup import setup_logging, setup_run_directories
 
-# target_009_imperial_main_entrance
-# target_003_statue
-# test_target_006_victoria_albert_museum_rooftop
+"""
+This script implements the complete reinforcement learning pipeline for training
+and evaluating a model to locate specific targets within satellite imagery. It includes:
+- Hyperparameter optimization using Optuna
+- Model training using PPO (Proximal Policy Optimization)
+- Evaluation on training and test sets
+- Logging and TensorBoard integration
+
+The pipeline is designed for the SatelliteEnv environment and uses a custom
+SatelliteRLPolicy. It has been most successful with the following target images:
+- target_009_imperial_main_entrance
+- target_003_statue
+- test_target_006_victoria_albert_museum_rooftop
+
+These targets consistently achieved a final cosine similarity of over 0.90,
+indicating highly accurate localization.
+
+The script handles the entire process from environment setup and hyperparameter
+tuning to model training, saving, and final evaluation on both training and test sets.
+
+Usage:
+    Run this script directly to execute the full RL pipeline.
+"""
 
 
 def main():

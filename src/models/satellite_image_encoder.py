@@ -8,6 +8,12 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
 
 class SatelliteFeatureExtractor(BaseFeaturesExtractor):
+    """
+    Uses a pre-trained MobileNetV2 model to extract features from satellite images。
+    The extractor processes both the target image and the current state image, concatenates
+    their features, and passes them through a small neural network for further processing.
+    """
+
     def __init__(self, observation_space: gym.spaces.Space, features_dim: int = 1280):
         super(SatelliteFeatureExtractor, self).__init__(observation_space, features_dim)
 
