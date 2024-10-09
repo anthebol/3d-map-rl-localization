@@ -1,5 +1,4 @@
 # Ignore all logs and TensorBoard logs
-logs/
 tensorboard_logs/
 
 # Ignore all __pycache__ directories
