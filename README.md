@@ -284,4 +284,25 @@ Model performance on test set: 1373.41 +/- 665.07
 
 ![Alt text](results/train24_500000steps_test7/diagrams/experiment_1_eval.png)
 
+## Instructions To Run The Pipline
+1. Before starting, ensure you have [Python](https://www.python.org/downloads/) and [pip](https://pypi.org/project/pip/) installed on your system.
+2. It is recommended to use a [virtual environment](https://packaging.python.org/en/latest/guides/installing-using-pip-and-virtual-environments/) for the Python packages to avoid conflicts with local dependancies
+3. Ensure you have CUDA available for GPU training. This project relies on GPU acceleration for efficient model training. Without CUDA and a compatible GPU, training times will be significantly longer and may be impractical.
+
+### Install required dependencies
+```
+pip install -r requirements.txt
+```
+
+### To verify CUDA availability, run the following command:
+```
+python -c "import torch; print('CUDA available:', torch.cuda.is_available())"
+```
+
+### Finally, run the full RL pipline :)
+```
+python main_rl_pipline.py
+```
+
+
 
