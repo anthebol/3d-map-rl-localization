@@ -2,11 +2,11 @@
 
 ## Introduction
 
-This repository presents the research conducted as part of the Undergraduate Research Opportunities Programme (UROP) at Imperial College London. The project was carried out during a Research Internship at the [Deepwok Lab](https://deepwok.github.io/) led by Dr. Aaron (Yiren) Zhao in the Department of Electrical and Electronic Engineering.
+This repository presents the research conducted as part of the Undergraduate Research Opportunities Programme (UROP) at Imperial College London. The project was carried out during a Research Internship at the [Deepwok Lab](https://deepwok.github.io/) led by [Dr. Aaron (Yiren) Zhao](https://profiles.imperial.ac.uk/a.zhao) in the Department of Electrical and Electronic Engineering.
 
 #### *Project Title: '3D Map-based Deep Reinforcement Learning Localization'*
 
-Supervised by: Dr. Aaron (Yiren) Zhao and Dr. Ilia Shumailov\
+Supervised by: [Dr. Aaron (Yiren) Zhao](https://profiles.imperial.ac.uk/a.zhao) and Dr. [Ilia Shumailov](https://scholar.google.co.uk/citations?user=e-YbZyEAAAAJ&hl=en)\
 Authored By: Anthony Bolton
 
 
@@ -15,7 +15,7 @@ Authored By: Anthony Bolton
 
  By leveraging 3D aerial imagery, the model can potentially be applied to various fields such as urban planning, emergency response, and geographical analysis. The use of reinforcement learning allows the system to adapt to different environments and improve its performance over time, making it a versatile tool for spatial analysis and location estimation tasks.
 
-## Technical Implementation
+## Model Architecture Summary
 ### Envvironment (`SatelliteEnv`)
 - Custom Gymnasium (previously OpenAI Gym) environment simulating navigation in large 3D satellite ariel images
 - **State Space**: dictionary with two 224x224x3 RGB images (target and current view)
@@ -31,7 +31,7 @@ Authored By: Anthony Bolton
 - **Agent Movement**: new position calculated as (x + ax * action_step, y + ay * action_step), clipped to environment bounds
 - **Episode Termination**: success (similarity > threshold) or max steps reached (default 1000)
 
-### NN Architecture (`SatelliteFeatureExtractor`)
+### Image Encoder (`SatelliteFeatureExtractor`)
 - Feature extractor inheriting from `BaseFeaturesExtractor`
 - **Core**: [MobileNetV2](https://arxiv.org/abs/1801.04381) (pretrained on ImageNet, classifier removed)
     - Processes target and current state images independently
@@ -82,17 +82,16 @@ Authored By: Anthony Bolton
 
 
 ## Experiments and Results
-### Environment Image
-![Alt text](data/env/env_image_exibition_road.jpg
+#### Environment Image: `data/env/south_kensington.jpg`
+![Alt text](data/env/south_kensington.jpg
 )
-### Experiment 0: Best Baseline Run on 1 Image
-#### Target Image
+### Experiment 0: Best baseline run on navigating 1 image
+#### Target Image: `data/train_eval/target_003_statue.jpg`
 
 <div align="center">
   <img src="data/train_eval/target_003_statue.jpg" alt="Alt text" width="200"/>
 </div>
 
-directory: `data/train_eval/target_003_statue.jpg`
 
 <div style="display: flex; justify-content: space-between;">
 
@@ -171,7 +170,7 @@ directory: `data/train_eval/target_003_statue.jpg`
 **Model performance on train/eval set**: 2787.31 +/- 6.30 \
 
 **Model performance on test set**: 2512.61 +/- 1067.12 \
-1/7 images navigated with 0.9128 final cosine similarity: `test_target_006_victoria_albert_museum_rooftop`
+- 1/7 images navigated with 0.9128 final cosine similarity: `test_target_006_victoria_albert_museum_rooftop`
 
 ### Training
 ![Alt text](results/train1_100000steps/diagrams/baseline_cos_sim_and_reward.svg)
@@ -258,11 +257,22 @@ directory: `data/train_eval/target_003_statue.jpg`
   </div>
 
 </div>
+*Model performance on train/eval set*: 1573.11 +/- 431.30
+- 2/25 targets navigated: 
+    - `target_003_statue`, final sim: 0.9026, steps taken: 8
+    - `target_009_imperial_main_entrance`, final sim: 0.9013, steps taken: 413
+
+*Model performance on test set*: 1373.41 +/- 665.07
+- 1/7 targets navigated: 
+
+(note that this experiment was designed to terminate the current episode if reward exceeds the successthreshold 0.90)
+
 
 ### Training
 
-![Alt text](results/train24_500000steps_test7/experiment_1_cos_sim_and_reward.svg)
-
+<div style="text-align:center">
+    <img src="results/train24_500000steps_test7/experiment_1_cos_sim_and_reward.svg" alt="Cosine Similarity and Reward Graph" width="70%">
+</div>
 ### [PPO Parameters]((https://stable-baselines3.readthedocs.io/en/master/modules/ppo.html#parameters)) From SB3 During Training
 
 ![Alt text](results/train24_500000steps_test7/experiment_1_PPO.png)
