@@ -2,7 +2,10 @@
 
 This repository presents the research conducted as part of the Undergraduate Research Opportunities Programme (UROP) at Imperial College London. The project was carried out during a Research Internship at the [Deepwok Lab](https://deepwok.github.io/) led by [Dr. Aaron (Yiren) Zhao](https://profiles.imperial.ac.uk/a.zhao) in the Department of Electrical and Electronic Engineering.
 
-### *Project Title: '3D Map-based Deep Reinforcement Learning Localization'*
+<h3 align="center">
+  <strong><em>Project Title: '3D Map-based Deep Reinforcement Learning Localization'</em></strong>
+</h3>
+
 
 Supervised by: [Dr. Aaron (Yiren) Zhao](https://profiles.imperial.ac.uk/a.zhao) and [Dr. Ilia Shumailov](https://scholar.google.co.uk/citations?user=e-YbZyEAAAAJ&hl=en)\
 Authored By: Anthony Bolton
