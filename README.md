@@ -10,6 +10,7 @@ This repository presents the research conducted as part of the Undergraduate Res
 Supervised by: [Dr. Aaron (Yiren) Zhao](https://profiles.imperial.ac.uk/a.zhao) and [Dr. Ilia Shumailov](https://scholar.google.co.uk/citations?user=e-YbZyEAAAAJ&hl=en)\
 Authored By: Anthony Bolton
 
+Note: `references` folder includes relevant work / papers read for this project
 
 # Overview
 `3d-map-rl-localization` is a Deep Reinforcement Learning (DRL) model designed to navigate through large satellite images to locate specific target locations. The model works with high-resolution 3D bird's-eye view imagery from [Google Earth Engine API](https://developers.google.com/earth-engine), capturing depth and spatial relationships in the environment. It uses the [Proximal Policy Optimization (PPO)](https://arxiv.org/abs/1707.06347) algorithm from [Stable Baselines3](https://stable-baselines3.readthedocs.io/en/master/) and operates within a custom environment based on the [Gymnasium](https://gymnasium.farama.org/index.html) framework. The system serves as a baseline for a novel approach to navigating and analyzing 3D aerial imagery using reinforcement learning techniques, aiming to estimate coordinates of event occurrences from image inputs shared across digital platforms.
@@ -22,7 +23,7 @@ Authored By: Anthony Bolton
 - **State Space**: dictionary with two 224x224x3 RGB images (target and current view)
 - **Action Space**: continuous 2D movement, Box(2) with range [-1, 1], scaled by action_step (default 0.05)
 - **Reward Function**: 
-    - *Primary*: sosine similarity between current view and target image
+    - *Primary*: cosine similarity between current view and target image
     - *Scaling Bonus*: Increases as the agent approaches the target, providing a smoother reward signal (e.g. success threshold when testing the best baseline model was 0.95 cosine similarity, reward starts to scale once it reaches 0.90)
     - *Success Reward*: +100 when similarity exceeds threshold (default 0.90)
     - *Time Penalty*: -0.01 per step for efficiency
