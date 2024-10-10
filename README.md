@@ -48,7 +48,7 @@ Note: `references` folder includes relevant work / papers read for this project
 ```
 
 ### Policy(`SatelliteRLPolicy`)
-- Custom `ActorCriticPolicy` using SatelliteFeatureExtractor as feature extractor
+- Custom `ActorCriticPolicy` using `SatelliteFeatureExtractor` as feature extractor
 - **Actor (Policy) Network**:
     - Maps 64-dimensional state features to action probabilities
     - Output: Mean and standard deviation for Gaussian action distribution
