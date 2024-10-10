@@ -1,5 +1,3 @@
-# 3d-map-rl-localization
-
 # Introduction
 
 This repository presents the research conducted as part of the Undergraduate Research Opportunities Programme (UROP) at Imperial College London. The project was carried out during a Research Internship at the [Deepwok Lab](https://deepwok.github.io/) led by [Dr. Aaron (Yiren) Zhao](https://profiles.imperial.ac.uk/a.zhao) in the Department of Electrical and Electronic Engineering.
@@ -76,7 +74,7 @@ Authored By: Anthony Bolton
 ### Environment Image: `data/env/south_kensington.jpg`
 ![Alt text](data/env/south_kensington.jpg
 )
-# Experiment 0: Best performing baseline model trained on 1 image
+## Experiment 0: Best performing baseline model trained on 1 image
 This experiment serves as a baseline for our satellite image localization task, focusing on training and evaluating the agent's performance on a single, high-performing target image. `target_003_statue` is selected as the singular training target because it demonstrated the best performance among all available images in the dataset.
 
 To further explore the agent's capabilities, the experiment scaled up the training size and removed optimization caps. Specifically, episodes were designed not to terminate - to observe how high the reward could go under extended training conditions on one image.
@@ -90,46 +88,52 @@ To further explore the agent's capabilities, the experiment scaled up the traini
 
 ## Configuration
 
-  <div style="width: 45%;">
-    <table>
+<div style="display: flex; justify-content: center; margin: 20px;">
+  <table style="border-collapse: collapse; width: 60%; text-align: center; font-family: Arial, sans-serif;">
+    <thead style="background-color: #f2f2f2;">
       <tr>
-        <th>Parameter</th>
-        <th>Value</th>
+        <th style="border: 1px solid #ddd; padding: 12px; text-align: center;">Parameter</th>
+        <th style="border: 1px solid #ddd; padding: 12px; text-align: center;">Value</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td style="border: 1px solid #ddd; padding: 12px; text-align: center;">Rollout Length (n_steps)</td>
+        <td style="border: 1px solid #ddd; padding: 12px; text-align: center;">1,024</td>
       </tr>
       <tr>
-        <td>Rollout Length (n_steps)</td>
-        <td>1,024</td>
+        <td style="border: 1px solid #ddd; padding: 12px; text-align: center;">Optuna Trials</td>
+        <td style="border: 1px solid #ddd; padding: 12px; text-align: center;">2</td>
       </tr>
       <tr>
-        <td>Optuna Trials</td>
-        <td>2</td>
+        <td style="border: 1px solid #ddd; padding: 12px; text-align: center;">Optuna Timesteps per Trial</td>
+        <td style="border: 1px solid #ddd; padding: 12px; text-align: center;">50,000</td>
       </tr>
       <tr>
-        <td>Optuna Timesteps per Trial</td>
-        <td>50,000</td>
+        <td style="border: 1px solid #ddd; padding: 12px; text-align: center;">Training Timesteps</td>
+        <td style="border: 1px solid #ddd; padding: 12px; text-align: center;">100,000</td>
       </tr>
       <tr>
-        <td>Training Timesteps</td>
-        <td>100,000</td>
+        <td style="border: 1px solid #ddd; padding: 12px; text-align: center;">Eval Frequency</td>
+        <td style="border: 1px solid #ddd; padding: 12px; text-align: center;">10,000</td>
       </tr>
       <tr>
-        <td>Eval Frequency</td>
-        <td>10,000</td>
+        <td style="border: 1px solid #ddd; padding: 12px; text-align: center;">Eval Episode</td>
+        <td style="border: 1px solid #ddd; padding: 12px; text-align: center;">10</td>
       </tr>
       <tr>
-        <td>Eval Episode</td>
-        <td>10</td>
+        <td style="border: 1px solid #ddd; padding: 12px; text-align: center;">Test Frequency</td>
+        <td style="border: 1px solid #ddd; padding: 12px; text-align: center;">50,000</td>
       </tr>
       <tr>
-        <td>Test Frequency</td>
-        <td>50,000</td>
+        <td style="border: 1px solid #ddd; padding: 12px; text-align: center;">Test Episode</td>
+        <td style="border: 1px solid #ddd; padding: 12px; text-align: center;">25</td>
       </tr>
-      <tr>
-        <td>Test Episode</td>
-        <td>25</td>
-      </tr>
-    </table>
-  </div>
+    </tbody>
+  </table>
+</div>
+
+## Tensorbaord Visualizations
 
 
 ### Training
@@ -141,35 +145,40 @@ To further explore the agent's capabilities, the experiment scaled up the traini
 
 ### Evaluation
 
-## Results
 
 ![Alt text](results/train1_100000steps/diagrams/baseline_eval.png)
 
-  <div style="width: 45%;">
-    <h4>Results</h4>
-    <table>
+## Results
+
+<div style="display: flex; justify-content: center; margin: 20px;">
+  <table style="border-collapse: collapse; width: 60%; text-align: center; font-family: Arial, sans-serif;">
+    <thead style="background-color: #f2f2f2;">
       <tr>
-        <th>Metric</th>
-        <th>Value</th>
+        <th style="border: 1px solid #ddd; padding: 12px; text-align: center;">Metric</th>
+        <th style="border: 1px solid #ddd; padding: 12px; text-align: center;">Value</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td style="border: 1px solid #ddd; padding: 12px; text-align: center;">Average Cosine Similarity</td>
+        <td style="border: 1px solid #ddd; padding: 12px; text-align: center;">0.9036</td>
       </tr>
       <tr>
-        <td>Average Cosine Similarity</td>
-        <td>0.9036</td>
+        <td style="border: 1px solid #ddd; padding: 12px; text-align: center;">Highest Cosine Similarity</td>
+        <td style="border: 1px solid #ddd; padding: 12px; text-align: center;">0.9154</td>
       </tr>
       <tr>
-        <td>Highest Cosine Similarity</td>
-        <td>0.9154</td>
+        <td style="border: 1px solid #ddd; padding: 12px; text-align: center;">Highest Episode (2,500 steps) Reward</td>
+        <td style="border: 1px solid #ddd; padding: 12px; text-align: center;">3,738.2632</td>
       </tr>
       <tr>
-        <td>Highest Episode (2,500 steps) Reward</td>
-        <td>3,738.2632</td>
+        <td style="border: 1px solid #ddd; padding: 12px; text-align: center;">Highest Step Reward</td>
+        <td style="border: 1px solid #ddd; padding: 12px; text-align: center;">2.4582</td>
       </tr>
-      <tr>
-        <td>Highest Step Reward</td>
-        <td>2.4582</td>
-      </tr>
-    </table>
-  </div>
+    </tbody>
+  </table>
+</div>
+
 
 **Model performance(Episode Reward) on train/eval set**: 2787.31 +/- 6.30
 
@@ -187,8 +196,8 @@ This approach aimed to create an agent capable of handling diverse target scenar
 
 ## Configuration
 
-<div style="display: flex; justify-content: center; margin: 20px;">
-  <table style="border-collapse: collapse; width: 60%; text-align: center; font-family: Arial, sans-serif;">
+<div style="text-align: center;">
+  <table style="border-collapse: collapse; margin: 0 auto; width: 60%; text-align: center; font-family: Arial, sans-serif;">
     <thead style="background-color: #f2f2f2;">
       <tr>
         <th style="border: 1px solid #ddd; padding: 12px; text-align: center;">Parameter</th>
@@ -232,12 +241,14 @@ This approach aimed to create an agent capable of handling diverse target scenar
   </table>
 </div>
 
-## Tensorboard Analysis
+
+
+## Tensorboard Visualizations
 
 
 ### Training
 
-<div style="text-align:center">
+<div align="center">
     <img src="results/train24_500000steps_test7/diagrams/experiment_1_cos_sim_and_reward.svg" alt="Cosine Similarity and Reward Graph" width="70%">
 </div>
 
@@ -292,7 +303,7 @@ This approach aimed to create an agent capable of handling diverse target scenar
 (note that this experiment was designed to terminate the current episode if reward exceeds the successthreshold 0.90)
 
 
-# Instructions
+# Running The Code
 ### Prerequisites
 
 1. Before starting, ensure you have [Python](https://www.python.org/downloads/) and [pip](https://pypi.org/project/pip/) installed on your system.
