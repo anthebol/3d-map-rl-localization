@@ -9,7 +9,7 @@ Authored By: Anthony Bolton
 
 
 # Overview
-`3d-map-rl-localization` is a Deep Reinforcement Learning (DRL) model designed to navigate through large satellite images to locate specific target locations. The model works with high-resolution 3D bird's-eye view imagery from Google Earth Engine API, capturing depth and spatial relationships in the environment. It uses the Proximal Policy Optimization (PPO) algorithm and operates within a custom environment based on the Gymnasium framework. The system serves as a baseline for a novel approach to navigating and analyzing 3D aerial imagery using reinforcement learning techniques, aiming to estimate coordinates of event occurrences from image inputs shared across digital platforms.
+`3d-map-rl-localization` is a Deep Reinforcement Learning (DRL) model designed to navigate through large satellite images to locate specific target locations. The model works with high-resolution 3D bird's-eye view imagery from [Google Earth Engine API](https://developers.google.com/earth-engine), capturing depth and spatial relationships in the environment. It uses the [Proximal Policy Optimization (PPO)](https://arxiv.org/abs/1707.06347) algorithm from [Stable Baselines3](https://stable-baselines3.readthedocs.io/en/master/) and operates within a custom environment based on the [Gymnasium](https://gymnasium.farama.org/index.html) framework. The system serves as a baseline for a novel approach to navigating and analyzing 3D aerial imagery using reinforcement learning techniques, aiming to estimate coordinates of event occurrences from image inputs shared across digital platforms.
 
  By leveraging 3D aerial imagery, the model can potentially be applied to various fields such as urban planning, emergency response, and geographical analysis. The use of reinforcement learning allows the system to adapt to different environments and improve its performance over time, making it a versatile tool for spatial analysis and location estimation tasks.
 
@@ -186,7 +186,7 @@ To further explore the agent's capabilities, the experiment scaled up the traini
 - 1/7 images navigated: `test_target_006_victoria_albert_museum_rooftop`, final sim: 0.9128
 
 
-# Experiment 1: Full pipeline(train, eval, test) trained on multiple images
+## Experiment 1: Full pipeline(train, eval, test) trained on multiple images
 This experiment trained the agent on 25 images and tested it on 7 unseen images. The training process involved exposing the agent to different target images across episodes. At the start of each episode, the environment reset with a randomly selected target image from the training set and a new starting coordinate for the agent. The agent learned to navigate and locate targets across this set of images, developing a generalized policy for the localization task. The experiences and learning from all 25 images were aggregated into the agent's overall policy throughout the training process. 
 
 This approach aimed to create an agent capable of handling diverse target scenarios and generalizing to new, unseen targets. The performance was then evaluated on the set of 7 test images to assess the agent's ability to apply its learned policy to novel situations.
